@@ -43,21 +43,21 @@ class mlp:
         count = 0
         while (((old_val_error1 - new_val_error) > 0.001) or ((old_val_error2 - old_val_error1) > 0.001)):
             count += 1
-            print count
+            print(count)
             self.mlptrain(inputs, targets, eta, niterations)
             old_val_error2 = old_val_error1
             old_val_error1 = new_val_error
             validout = self.mlpfwd(valid)
             new_val_error = 0.5 * np.sum((validtargets - validout)**2)
 
-        print "Stopped", new_val_error, old_val_error1, old_val_error2
+        print("Stopped", new_val_error, old_val_error1, old_val_error2)
         return new_val_error
 
     def mlptrain(self, inputs, targets, eta, niterations):
         """ Train the thing """
         # Add the inputs that match the bias node
         inputs = np.concatenate((inputs, -np.ones((self.ndata, 1))), axis=1)
-        change = range(self.ndata)
+        change = list(range(self.ndata))
 
         updatew1 = np.zeros((np.shape(self.weights1)))
         updatew2 = np.zeros((np.shape(self.weights2)))
@@ -68,7 +68,7 @@ class mlp:
 
             error = 0.5 * np.sum((self.outputs - targets)**2)
             if (np.mod(n, 100) == 0):
-                print "Iteration: ", n, " Error: ", error
+                print("Iteration: ", n, " Error: ", error)
 
             # Different types of output neurons
             if self.outtype == 'linear':
@@ -80,7 +80,7 @@ class mlp:
                 deltao = (self.outputs - targets) * (self.outputs *
                                                      (-self.outputs) + self.outputs) / self.ndata
             else:
-                print "error"
+                print("error")
 
             deltah = self.hidden * self.beta * \
                 (1.0 - self.hidden) * (np.dot(deltao, np.transpose(self.weights2)))
@@ -117,7 +117,7 @@ class mlp:
                 np.ones((1, np.shape(outputs)[0]))
             return np.transpose(np.transpose(np.exp(outputs)) / normalisers)
         else:
-            print "error"
+            print("error")
 
     def confmat(self, inputs, targets):
         """Confusion matrix"""
@@ -143,6 +143,6 @@ class mlp:
                 cm[i, j] = np.sum(np.where(outputs == i, 1, 0)
                                   * np.where(targets == j, 1, 0))
 
-        print "Confusion matrix is:"
-        print cm
-        print "Percentage Correct: ", np.trace(cm) / np.sum(cm) * 100
+        print("Confusion matrix is:")
+        print(cm)
+        print("Percentage Correct: ", np.trace(cm) / np.sum(cm) * 100)
