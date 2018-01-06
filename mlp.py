@@ -20,13 +20,10 @@ logger = logging.getLogger(__name__)
 class MultilayerPerceptron:
     """ A Multi-Layer Perceptron"""
 
-    def __init__(self, input_data, target_data, hidden_node_count, beta=1,
-                 momentum=0.9, output_type=OutputType.LOGISTIC):
+    def __init__(self, input_node_count, hidden_node_count, output_node_count,
+                 beta=1, momentum=0.9, output_type=OutputType.LOGISTIC):
 
         # Set up network size
-        input_node_count = np.shape(input_data)[1]
-        output_node_count = np.shape(target_data)[1]
-        self.training_dataset_count = np.shape(input_data)[0]
         self.beta = beta
         self.momentum = momentum
         self.output_type = output_type
@@ -62,9 +59,10 @@ class MultilayerPerceptron:
     def mlptrain(self, inputs, targets, eta, niterations):
         """ Train the thing """
         # Add the inputs that match the bias node
+        training_dataset_count = np.shape(inputs)[0]
         inputs = np.concatenate(
-            (inputs, -np.ones((self.training_dataset_count, 1))), axis=1)
-        change = list(range(self.training_dataset_count))
+            (inputs, -np.ones((training_dataset_count, 1))), axis=1)
+        change = list(range(training_dataset_count))
         updatew1 = np.zeros((np.shape(self.hidden_nodes)))
         updatew2 = np.zeros((np.shape(self.output_nodes)))
         for n in range(niterations):
@@ -75,7 +73,7 @@ class MultilayerPerceptron:
 
             # Different types of output neurons
             if self.output_type == OutputType.LINEAR:
-                deltao = (self.outputs - targets) / self.training_dataset_count
+                deltao = (self.outputs - targets) / training_dataset_count
 
             elif self.output_type == OutputType.LOGISTIC:
                 deltao = self.beta * (self.outputs - targets) * \
@@ -83,7 +81,7 @@ class MultilayerPerceptron:
 
             elif self.output_type == OutputType.SOFTMAX:
                 deltao = (self.outputs - targets) * (self.outputs *
-                                                     (-self.outputs) + self.outputs) / self.training_dataset_count
+                                                     (-self.outputs) + self.outputs) / training_dataset_count
 
             else:
                 raise InvalidOutputTypeError(

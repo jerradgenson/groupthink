@@ -41,7 +41,7 @@ class TestMLP(unittest.TestCase):
 
     def test_logical_and(self):
         and_data = np.array([[0, 0, 0], [0, 1, 0], [1, 0, 0], [1, 1, 1]])
-        neural_net = mlp.mlp(and_data[:, 0:2], and_data[:, 2:3], 2)
+        neural_net = mlp.MultilayerPerceptron(2, 2, 1)
         neural_net.mlptrain(and_data[:, 0:2], and_data[:, 2:3], 0.25, 1001)
         confusion_matrix = neural_net.confmat(
             and_data[:, 0:2], and_data[:, 2:3])
@@ -51,9 +51,8 @@ class TestMLP(unittest.TestCase):
 
     def test_logical_xor(self):
         xor_data = np.array([[0, 0, 0], [0, 1, 1], [1, 0, 1], [1, 1, 0]])
-        neural_net = mlp.mlp(
-            xor_data[:, 0:2], xor_data[:, 2:3], 2,
-            output_type=mlp.OutputType.LOGISTIC)
+        neural_net = mlp.MultilayerPerceptron(2, 2, 1,
+                                              output_type=mlp.OutputType.LOGISTIC)
 
         neural_net.mlptrain(xor_data[:, 0:2], xor_data[:, 2:3], 0.25, 5001)
         neural_net.confmat(xor_data[:, 0:2], xor_data[:, 2:3])
