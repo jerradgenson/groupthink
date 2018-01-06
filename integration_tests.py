@@ -52,7 +52,8 @@ class TestMLP(unittest.TestCase):
     def test_logical_xor(self):
         xor_data = np.array([[0, 0, 0], [0, 1, 1], [1, 0, 1], [1, 1, 0]])
         neural_net = mlp.mlp(
-            xor_data[:, 0:2], xor_data[:, 2:3], 2, outtype='logistic')
+            xor_data[:, 0:2], xor_data[:, 2:3], 2,
+            output_type=mlp.OutputType.LOGISTIC)
 
         neural_net.mlptrain(xor_data[:, 0:2], xor_data[:, 2:3], 0.25, 5001)
         neural_net.confmat(xor_data[:, 0:2], xor_data[:, 2:3])
