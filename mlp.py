@@ -7,11 +7,14 @@
 
 # Stephen Marsland, 2008, 2014
 
+import logging
 from enum import Enum
+
 import numpy as np
 
 
 OutputType = Enum('OutputType', 'LINEAR LOGISTIC SOFTMAX', module=__name__)
+logger = logging.getLogger(__name__)
 
 
 class mlp:
@@ -47,12 +50,14 @@ class mlp:
         count = 0
         while (((old_val_error1 - new_val_error) > 0.001) or ((old_val_error2 - old_val_error1) > 0.001)):
             count += 1
+            logger.info(count)
             self.mlptrain(inputs, targets, eta, niterations)
             old_val_error2 = old_val_error1
             old_val_error1 = new_val_error
             validout = self.mlpfwd(valid)
             new_val_error = 0.5 * np.sum((validtargets - validout)**2)
 
+        logger.info("Stopped", new_val_error, old_val_error1, old_val_error2)
         return new_val_error
 
     def mlptrain(self, inputs, targets, eta, niterations):
@@ -70,7 +75,7 @@ class mlp:
 
             error = 0.5 * np.sum((self.outputs - targets)**2)
             if (np.mod(n, 100) == 0):
-                print("Iteration: ", n, " Error: ", error)
+                logger.info("Iteration: ", n, " Error: ", error)
 
             # Different types of output neurons
             if self.output_type == OutputType.LINEAR:
@@ -147,9 +152,9 @@ class mlp:
                 cm[i, j] = np.sum(np.where(outputs == i, 1, 0)
                                   * np.where(targets == j, 1, 0))
 
-        print("Confusion matrix is:")
-        print(cm)
-        print("Percentage Correct: ", np.trace(cm) / np.sum(cm) * 100)
+        logger.info("Confusion matrix is:")
+        logger.info(str(cm))
+        logger.info("Percentage Correct: ", np.trace(cm) / np.sum(cm) * 100)
         return cm
 
 
