@@ -17,26 +17,26 @@ OutputType = Enum('OutputType', 'LINEAR LOGISTIC SOFTMAX', module=__name__)
 logger = logging.getLogger(__name__)
 
 
-class mlp:
+class MultilayerPerceptron:
     """ A Multi-Layer Perceptron"""
 
-    def __init__(self, inputs, targets, nhidden, beta=1, momentum=0.9, output_type=OutputType.LOGISTIC):
-        """ Constructor """
+    def __init__(self, input_data, target_data, hidden_node_count, beta=1,
+                 momentum=0.9, output_type=OutputType.LOGISTIC):
+
         # Set up network size
-        self.nin = np.shape(inputs)[1]
-        self.nout = np.shape(targets)[1]
-        self.ndata = np.shape(inputs)[0]
-        self.nhidden = nhidden
+        input_node_count = np.shape(input_data)[1]
+        output_node_count = np.shape(target_data)[1]
+        self.training_dataset_count = np.shape(input_data)[0]
         self.beta = beta
         self.momentum = momentum
         self.output_type = output_type
 
         # Initialise network
-        self.weights1 = (np.random.rand(
-            self.nin + 1, self.nhidden) - 0.5) * 2 / np.sqrt(self.nin)
+        self.hidden_nodes = (np.random.rand(
+            input_node_count + 1, hidden_node_count) - 0.5) * 2 / np.sqrt(input_node_count)
 
-        self.weights2 = (np.random.rand(self.nhidden + 1,
-                                        self.nout) - 0.5) * 2 / np.sqrt(self.nhidden)
+        self.output_nodes = (np.random.rand(hidden_node_count + 1,
+                                            output_node_count) - 0.5) * 2 / np.sqrt(hidden_node_count)
 
     def earlystopping(self, inputs, targets, valid, validtargets, eta, niterations=100):
 
@@ -62,10 +62,11 @@ class mlp:
     def mlptrain(self, inputs, targets, eta, niterations):
         """ Train the thing """
         # Add the inputs that match the bias node
-        inputs = np.concatenate((inputs, -np.ones((self.ndata, 1))), axis=1)
-        change = list(range(self.ndata))
-        updatew1 = np.zeros((np.shape(self.weights1)))
-        updatew2 = np.zeros((np.shape(self.weights2)))
+        inputs = np.concatenate(
+            (inputs, -np.ones((self.training_dataset_count, 1))), axis=1)
+        change = list(range(self.training_dataset_count))
+        updatew1 = np.zeros((np.shape(self.hidden_nodes)))
+        updatew2 = np.zeros((np.shape(self.output_nodes)))
         for n in range(niterations):
             self.outputs = self.mlpfwd(inputs)
             error = 0.5 * np.sum((self.outputs - targets)**2)
@@ -74,7 +75,7 @@ class mlp:
 
             # Different types of output neurons
             if self.output_type == OutputType.LINEAR:
-                deltao = (self.outputs - targets) / self.ndata
+                deltao = (self.outputs - targets) / self.training_dataset_count
 
             elif self.output_type == OutputType.LOGISTIC:
                 deltao = self.beta * (self.outputs - targets) * \
@@ -82,14 +83,15 @@ class mlp:
 
             elif self.output_type == OutputType.SOFTMAX:
                 deltao = (self.outputs - targets) * (self.outputs *
-                                                     (-self.outputs) + self.outputs) / self.ndata
+                                                     (-self.outputs) + self.outputs) / self.training_dataset_count
 
             else:
                 raise InvalidOutputTypeError(
                     'output_type not member of OutputType')
 
             deltah = self.hidden * self.beta * \
-                (1.0 - self.hidden) * (np.dot(deltao, np.transpose(self.weights2)))
+                (1.0 - self.hidden) * \
+                (np.dot(deltao, np.transpose(self.output_nodes)))
 
             updatew1 = eta * (np.dot(np.transpose(inputs),
                                      deltah[:, :-1])) + self.momentum * updatew1
@@ -97,8 +99,8 @@ class mlp:
             updatew2 = eta * (np.dot(np.transpose(self.hidden),
                                      deltao)) + self.momentum * updatew2
 
-            self.weights1 -= updatew1
-            self.weights2 -= updatew2
+            self.hidden_nodes -= updatew1
+            self.output_nodes -= updatew2
 
             # Randomise order of inputs (not necessary for matrix-based calculation)
             # np.random.shuffle(change)
@@ -108,12 +110,12 @@ class mlp:
     def mlpfwd(self, inputs):
         """ Run the network forward """
 
-        self.hidden = np.dot(inputs, self.weights1)
+        self.hidden = np.dot(inputs, self.hidden_nodes)
         self.hidden = 1.0 / (1.0 + np.exp(-self.beta * self.hidden))
         self.hidden = np.concatenate(
             (self.hidden, -np.ones((np.shape(inputs)[0], 1))), axis=1)
 
-        outputs = np.dot(self.hidden, self.weights2)
+        outputs = np.dot(self.hidden, self.output_nodes)
 
         # Different types of output neurons
         if self.output_type == OutputType.LINEAR:
