@@ -27,7 +27,6 @@ class mlp:
         self.nout = np.shape(targets)[1]
         self.ndata = np.shape(inputs)[0]
         self.nhidden = nhidden
-
         self.beta = beta
         self.momentum = momentum
         self.output_type = output_type
@@ -35,6 +34,7 @@ class mlp:
         # Initialise network
         self.weights1 = (np.random.rand(
             self.nin + 1, self.nhidden) - 0.5) * 2 / np.sqrt(self.nin)
+
         self.weights2 = (np.random.rand(self.nhidden + 1,
                                         self.nout) - 0.5) * 2 / np.sqrt(self.nhidden)
 
@@ -46,7 +46,6 @@ class mlp:
         old_val_error1 = 100002
         old_val_error2 = 100001
         new_val_error = 100000
-
         count = 0
         while (((old_val_error1 - new_val_error) > 0.001) or ((old_val_error2 - old_val_error1) > 0.001)):
             count += 1
@@ -65,14 +64,10 @@ class mlp:
         # Add the inputs that match the bias node
         inputs = np.concatenate((inputs, -np.ones((self.ndata, 1))), axis=1)
         change = list(range(self.ndata))
-
         updatew1 = np.zeros((np.shape(self.weights1)))
         updatew2 = np.zeros((np.shape(self.weights2)))
-
         for n in range(niterations):
-
             self.outputs = self.mlpfwd(inputs)
-
             error = 0.5 * np.sum((self.outputs - targets)**2)
             if (np.mod(n, 100) == 0):
                 logger.info("Iteration: ", n, " Error: ", error)
@@ -80,12 +75,15 @@ class mlp:
             # Different types of output neurons
             if self.output_type == OutputType.LINEAR:
                 deltao = (self.outputs - targets) / self.ndata
+
             elif self.output_type == OutputType.LOGISTIC:
                 deltao = self.beta * (self.outputs - targets) * \
                     self.outputs * (1.0 - self.outputs)
+
             elif self.output_type == OutputType.SOFTMAX:
                 deltao = (self.outputs - targets) * (self.outputs *
                                                      (-self.outputs) + self.outputs) / self.ndata
+
             else:
                 raise InvalidOutputTypeError(
                     'output_type not member of OutputType')
@@ -95,8 +93,10 @@ class mlp:
 
             updatew1 = eta * (np.dot(np.transpose(inputs),
                                      deltah[:, :-1])) + self.momentum * updatew1
+
             updatew2 = eta * (np.dot(np.transpose(self.hidden),
                                      deltao)) + self.momentum * updatew2
+
             self.weights1 -= updatew1
             self.weights2 -= updatew2
 
@@ -118,12 +118,16 @@ class mlp:
         # Different types of output neurons
         if self.output_type == OutputType.LINEAR:
             return outputs
+
         elif self.output_type == OutputType.LOGISTIC:
             return 1.0 / (1.0 + np.exp(-self.beta * outputs))
+
         elif self.output_type == OutputType.SOFTMAX:
             normalisers = np.sum(np.exp(outputs), axis=1) * \
                 np.ones((1, np.shape(outputs)[0]))
+
             return np.transpose(np.transpose(np.exp(outputs)) / normalisers)
+
         else:
             raise InvalidOutputTypeError(
                 'output_type not member of OutputType')
@@ -134,13 +138,13 @@ class mlp:
         # Add the inputs that match the bias node
         inputs = np.concatenate(
             (inputs, -np.ones((np.shape(inputs)[0], 1))), axis=1)
+
         outputs = self.mlpfwd(inputs)
-
         nclasses = np.shape(targets)[1]
-
         if nclasses == 1:
             nclasses = 2
             outputs = np.where(outputs > 0.5, 1, 0)
+
         else:
             # 1-of-N encoding
             outputs = np.argmax(outputs, 1)
