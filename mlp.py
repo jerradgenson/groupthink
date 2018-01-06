@@ -23,7 +23,6 @@ class MultilayerPerceptron:
     def __init__(self, input_node_count, hidden_node_count, output_node_count,
                  beta=1, momentum=0.9, output_type=OutputType.LOGISTIC):
 
-        # Set up network size
         self.beta = beta
         self.momentum = momentum
         self.output_type = output_type
