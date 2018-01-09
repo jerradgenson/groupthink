@@ -67,7 +67,7 @@ class MultilayerPerceptron:
         logger.info("Stopped", current_error, previous_error, oldest_error)
         return current_error
 
-    def train(self, inputs, targets, learning_rate, iterations):
+    def train(self, inputs, targets, learning_rate, iterations, randomize=False):
 
         # Add the inputs that match the bias node
         training_dataset_count = np.shape(inputs)[0]
@@ -120,10 +120,11 @@ class MultilayerPerceptron:
             self.hidden_weights -= hidden_layer_updates
             self.output_weights -= output_layer_updates
 
-            # Randomise order of inputs (not necessary for matrix-based calculation)
-            # np.random.shuffle(node_order)
-            #inputs = inputs[node_order,:]
-            #targets = targets[node_order,:]
+            if randomize:
+                # Randomize order of input vector and update target vector correspondingly.
+                np.random.shuffle(node_order)
+                inputs = inputs[node_order, :]
+                targets = targets[node_order, :]
 
     def mlpfwd(self, inputs):
         """ Run the network forward """
