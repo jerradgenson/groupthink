@@ -28,11 +28,11 @@ class MultilayerPerceptron:
         self.output_type = output_type
 
         # Initialise network
-        self.hidden_nodes = (np.random.rand(
+        self.hidden_weights = (np.random.rand(
             input_node_count + 1, hidden_node_count) - 0.5) * 2 / np.sqrt(input_node_count)
 
-        self.output_nodes = (np.random.rand(hidden_node_count + 1,
-                                            output_node_count) - 0.5) * 2 / np.sqrt(hidden_node_count)
+        self.output_weights = (np.random.rand(hidden_node_count + 1,
+                                              output_node_count) - 0.5) * 2 / np.sqrt(hidden_node_count)
 
     def train_with_early_stopping(self, training_inputs, training_targets,
                                   validation_inputs, validation_targets,
@@ -73,16 +73,22 @@ class MultilayerPerceptron:
         training_dataset_count = np.shape(inputs)[0]
         inputs = np.concatenate(
             (inputs, -np.ones((training_dataset_count, 1))), axis=1)
-        change = list(range(training_dataset_count))
-        updatew1 = np.zeros((np.shape(self.hidden_nodes)))
-        updatew2 = np.zeros((np.shape(self.output_nodes)))
-        for n in range(iterations):
+
+        # Compute the initial order of input and target nodes so we can
+        # randomize them if we so choose.
+        node_order = list(range(training_dataset_count))
+
+        # Create arrays to store update values for weight vectors.
+        hidden_layer_updates = np.zeros((np.shape(self.hidden_weights)))
+        output_layer_updates = np.zeros((np.shape(self.output_weights)))
+
+        for iteration in range(iterations):
             self.outputs = self.mlpfwd(inputs)
             error = 0.5 * np.sum((self.outputs - targets)**2)
-            if (np.mod(n, 100) == 0):
-                logger.info("Iteration: ", n, " Error: ", error)
+            if (np.mod(iteration, 100) == 0):
+                logger.info("Iteration: ", iteration, " Error: ", error)
 
-            # Different types of output neurons
+            # Compute the output layer error gradient for different activation functions.
             if self.output_type == OutputType.LINEAR:
                 deltao = (self.outputs - targets) / training_dataset_count
 
@@ -98,33 +104,36 @@ class MultilayerPerceptron:
                 raise InvalidOutputTypeError(
                     'output_type not member of OutputType')
 
+            # Compute the hidden layer error gradient for logistic activation function.
             deltah = self.hidden * self.beta * \
                 (1.0 - self.hidden) * \
-                (np.dot(deltao, np.transpose(self.output_nodes)))
+                (np.dot(deltao, np.transpose(self.output_weights)))
 
-            updatew1 = learning_rate * (np.dot(np.transpose(inputs),
-                                               deltah[:, :-1])) + self.momentum * updatew1
+            # Use error gradients to compute weight update values.
+            hidden_layer_updates = learning_rate * (np.dot(np.transpose(inputs),
+                                                           deltah[:, :-1])) + self.momentum * hidden_layer_updates
 
-            updatew2 = learning_rate * (np.dot(np.transpose(self.hidden),
-                                               deltao)) + self.momentum * updatew2
+            output_layer_updates = learning_rate * (np.dot(np.transpose(self.hidden),
+                                                           deltao)) + self.momentum * output_layer_updates
 
-            self.hidden_nodes -= updatew1
-            self.output_nodes -= updatew2
+            # Apply weight update values to hidden and output layer weights.
+            self.hidden_weights -= hidden_layer_updates
+            self.output_weights -= output_layer_updates
 
             # Randomise order of inputs (not necessary for matrix-based calculation)
-            # np.random.shuffle(change)
-            #inputs = inputs[change,:]
-            #targets = targets[change,:]
+            # np.random.shuffle(node_order)
+            #inputs = inputs[node_order,:]
+            #targets = targets[node_order,:]
 
     def mlpfwd(self, inputs):
         """ Run the network forward """
 
-        self.hidden = np.dot(inputs, self.hidden_nodes)
+        self.hidden = np.dot(inputs, self.hidden_weights)
         self.hidden = 1.0 / (1.0 + np.exp(-self.beta * self.hidden))
         self.hidden = np.concatenate(
             (self.hidden, -np.ones((np.shape(inputs)[0], 1))), axis=1)
 
-        outputs = np.dot(self.hidden, self.output_nodes)
+        outputs = np.dot(self.hidden, self.output_weights)
 
         # Different types of output neurons
         if self.output_type == OutputType.LINEAR:
