@@ -104,7 +104,7 @@ class MultilayerPerceptron:
                        learning_rate, iterations)
             oldest_error = previous_error
             previous_error = current_error
-            output_value = self.mlpfwd(valid)
+            output_value = self.recall(valid)
             current_error = (
                 0.5 * np.sum((validation_targets - output_value)**2))
 
@@ -155,7 +155,7 @@ class MultilayerPerceptron:
         output_layer_updates = np.zeros((np.shape(self.output_weights)))
 
         for iteration in range(iterations):
-            self.outputs = self.mlpfwd(inputs)
+            self.outputs = self.recall(inputs)
             error = 0.5 * np.sum((self.outputs - targets)**2)
             if (np.mod(iteration, 100) == 0):
                 logger.info("Iteration: ", iteration, " Error: ", error)
@@ -177,8 +177,8 @@ class MultilayerPerceptron:
                     'output_type not member of OutputType')
 
             # Compute the hidden layer error gradient for logistic activation function.
-            deltah = self.hidden * self.beta * \
-                (1.0 - self.hidden) * \
+            deltah = self.hidden_outputs * self.beta * \
+                (1.0 - self.hidden_outputs) * \
                 (np.dot(deltao, np.transpose(self.output_weights)))
 
             # Use error gradients to compute weight update values.
@@ -188,7 +188,7 @@ class MultilayerPerceptron:
             hidden_layer_updates = learning_rate * (np.dot(np.transpose(inputs),
                                                            deltah[:, :-1])) + self.momentum * hidden_layer_updates
 
-            output_layer_updates = learning_rate * (np.dot(np.transpose(self.hidden),
+            output_layer_updates = learning_rate * (np.dot(np.transpose(self.hidden_outputs),
                                                            deltao)) + self.momentum * output_layer_updates
 
             # Apply weight update values to hidden and output layer weights.
@@ -203,28 +203,40 @@ class MultilayerPerceptron:
 
         return error
 
-    def mlpfwd(self, inputs):
-        """ Run the network forward """
+    def recall(self, inputs):
+        """ 
+        Perform a recall on a given set of inputs.
+        In other words, run the network to make a prediction or classification.
 
-        self.hidden = np.dot(inputs, self.hidden_weights)
-        self.hidden = 1.0 / (1.0 + np.exp(-self.beta * self.hidden))
-        self.hidden = np.concatenate(
-            (self.hidden, -np.ones((np.shape(inputs)[0], 1))), axis=1)
+        Args
+          inputs: Input data to the network as a numpy array of arrays, where 
+                  each inner array is one set of inputs.
 
-        outputs = np.dot(self.hidden, self.output_weights)
+        Returns
+          A numpy array of arrays representing the network's outputs, where each
+          inner array corresponds to an inner array in the inputs.
 
-        # Different types of output neurons
+        """
+
+        self.hidden_outputs = np.dot(inputs, self.hidden_weights)
+        self.hidden_outputs = (
+            1.0 / (1.0 + np.exp(-self.beta * self.hidden_outputs)))
+
+        self.hidden_outputs = np.concatenate(
+            (self.hidden_outputs, -np.ones((np.shape(inputs)[0], 1))), axis=1)
+
+        network_outputs = np.dot(self.hidden_outputs, self.output_weights)
         if self.output_type == OutputType.LINEAR:
-            return outputs
+            return network_outputs
 
         elif self.output_type == OutputType.LOGISTIC:
-            return 1.0 / (1.0 + np.exp(-self.beta * outputs))
+            return 1.0 / (1.0 + np.exp(-self.beta * network_outputs))
 
         elif self.output_type == OutputType.SOFTMAX:
-            normalisers = np.sum(np.exp(outputs), axis=1) * \
-                np.ones((1, np.shape(outputs)[0]))
+            normalisers = np.sum(np.exp(network_outputs), axis=1) * \
+                np.ones((1, np.shape(network_outputs)[0]))
 
-            return np.transpose(np.transpose(np.exp(outputs)) / normalisers)
+            return np.transpose(np.transpose(np.exp(network_outputs)) / normalisers)
 
         else:
             raise InvalidOutputTypeError(
@@ -237,7 +249,7 @@ class MultilayerPerceptron:
         inputs = np.concatenate(
             (inputs, -np.ones((np.shape(inputs)[0], 1))), axis=1)
 
-        outputs = self.mlpfwd(inputs)
+        outputs = self.recall(inputs)
         nclasses = np.shape(targets)[1]
         if nclasses == 1:
             nclasses = 2
