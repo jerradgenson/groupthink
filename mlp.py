@@ -18,7 +18,23 @@ logger = logging.getLogger(__name__)
 
 
 class MultilayerPerceptron:
-    """ A Multi-Layer Perceptron"""
+    """
+    A multilayer perceptron learner.
+    Multilayer perceptron is a type of neural network that features an input
+    layer, one to two hidden layers, and an output layer, which are trained
+    by the backpropagation algorithm.
+
+    Args
+      input_node_count: Number of inputs to the network.
+      hidden_node_count: Number of hidden nodes in the network's hidden layer.
+      output_node_count: Number of output nodes.
+      beta: A constant in the logistic activation equation. Defaults to 1.
+      momentum: The amount of "momentum" to conserve during training as a float
+                between 0 and 1. Defaults to 0.9.
+      output_type: Activation function to use at the output nodes. Must be
+                   a member of OutputType. Defaults to LOGISTIC.
+
+    """
 
     def __init__(self, input_node_count, hidden_node_count, output_node_count,
                  beta=1, momentum=0.9, output_type=OutputType.LOGISTIC):
