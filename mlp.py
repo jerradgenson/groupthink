@@ -34,29 +34,41 @@ class MultilayerPerceptron:
         self.output_nodes = (np.random.rand(hidden_node_count + 1,
                                             output_node_count) - 0.5) * 2 / np.sqrt(hidden_node_count)
 
-    def earlystopping(self, inputs, targets, valid, validtargets, eta, niterations=100):
+    def train_with_early_stopping(self, training_inputs, training_targets,
+                                  validation_inputs, validation_targets,
+                                  learning_rate, iterations=100, max_epoch=-1):
 
         valid = np.concatenate(
-            (valid, -np.ones((np.shape(valid)[0], 1))), axis=1)
+            (validation_inputs, -np.ones((np.shape(validation_inputs)[0], 1))), axis=1)
 
-        old_val_error1 = 100002
-        old_val_error2 = 100001
-        new_val_error = 100000
-        count = 0
-        while (((old_val_error1 - new_val_error) > 0.001) or ((old_val_error2 - old_val_error1) > 0.001)):
-            count += 1
-            logger.info(count)
-            self.mlptrain(inputs, targets, eta, niterations)
-            old_val_error2 = old_val_error1
-            old_val_error1 = new_val_error
-            validout = self.mlpfwd(valid)
-            new_val_error = 0.5 * np.sum((validtargets - validout)**2)
+        oldest_error = 0
+        previous_error = 0
+        current_error = 0
+        current_epoch = 0
+        while True:
+            # Iterate at least three times in order to properly initialize error
+            # variables before early stopping.
+            if previous_error - current_error < 0.001 and oldest_error - previous_error < 0.001 and current_epoch > 2:
+                break
 
-        logger.info("Stopped", new_val_error, old_val_error1, old_val_error2)
-        return new_val_error
+            if current_epoch > max_epoch and max_epoch > 0:
+                break
 
-    def mlptrain(self, inputs, targets, eta, niterations):
-        """ Train the thing """
+            current_epoch += 1
+            logger.info(current_epoch)
+            self.train(training_inputs, training_targets,
+                       learning_rate, iterations)
+            oldest_error = previous_error
+            previous_error = current_error
+            output_value = self.mlpfwd(valid)
+            current_error = (
+                0.5 * np.sum((validation_targets - output_value)**2))
+
+        logger.info("Stopped", current_error, previous_error, oldest_error)
+        return current_error
+
+    def train(self, inputs, targets, learning_rate, iterations):
+
         # Add the inputs that match the bias node
         training_dataset_count = np.shape(inputs)[0]
         inputs = np.concatenate(
@@ -64,7 +76,7 @@ class MultilayerPerceptron:
         change = list(range(training_dataset_count))
         updatew1 = np.zeros((np.shape(self.hidden_nodes)))
         updatew2 = np.zeros((np.shape(self.output_nodes)))
-        for n in range(niterations):
+        for n in range(iterations):
             self.outputs = self.mlpfwd(inputs)
             error = 0.5 * np.sum((self.outputs - targets)**2)
             if (np.mod(n, 100) == 0):
@@ -90,11 +102,11 @@ class MultilayerPerceptron:
                 (1.0 - self.hidden) * \
                 (np.dot(deltao, np.transpose(self.output_nodes)))
 
-            updatew1 = eta * (np.dot(np.transpose(inputs),
-                                     deltah[:, :-1])) + self.momentum * updatew1
+            updatew1 = learning_rate * (np.dot(np.transpose(inputs),
+                                               deltah[:, :-1])) + self.momentum * updatew1
 
-            updatew2 = eta * (np.dot(np.transpose(self.hidden),
-                                     deltao)) + self.momentum * updatew2
+            updatew2 = learning_rate * (np.dot(np.transpose(self.hidden),
+                                               deltao)) + self.momentum * updatew2
 
             self.hidden_nodes -= updatew1
             self.output_nodes -= updatew2
