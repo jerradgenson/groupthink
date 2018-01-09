@@ -68,6 +68,34 @@ class MultilayerPerceptron:
         return current_error
 
     def train(self, inputs, targets, learning_rate, iterations, randomize=False):
+        """
+        Train the neural network using backpropagation.
+        Training happens en batch, which means all the training data is fed to
+        the algorithm at once. Mutates self.hidden_weights and
+        self.output_weights.
+
+        Args
+          inputs: Training inputs to the network as a numpy array of arrays,
+                  where each inner array is one set of inputs.
+          targets: Target outputs for the network as a numpy array of arrays,
+                   where each inner array is one set of target outputs. Target
+                   arrays must match the order of input arrays.
+          learning_rate: A float between 0 and 1 that determines the magnitude
+                         of updates to the network's weights. A high learning
+                         rate will cause the network to converge faster, but
+                         might negatively impact the precision/solution quality.
+          iterations: Number of iterations to run the training algorithm.
+                      If this is set too low, the algorithm might not converge
+                      on a solution. If set too high, it might take too long to
+                      run and/or overfit the data.
+          randomize: A flag that indicates whether or not to randomize inputs
+                     and targets. This can improve the speed at which the
+                     training algorithm converges. Default value is False.
+
+        Returns
+          None
+
+        """
 
         # Add the inputs that match the bias node
         training_dataset_count = np.shape(inputs)[0]
@@ -110,6 +138,9 @@ class MultilayerPerceptron:
                 (np.dot(deltao, np.transpose(self.output_weights)))
 
             # Use error gradients to compute weight update values.
+            # We're incorporating the previous weight changes to give them some
+            # "momentum." This is done to help prevent the algorithm from
+            # becoming stuck in local optima.
             hidden_layer_updates = learning_rate * (np.dot(np.transpose(inputs),
                                                            deltah[:, :-1])) + self.momentum * hidden_layer_updates
 
