@@ -121,7 +121,7 @@ class MultilayerPerceptron:
                      training algorithm converges. Default value is False.
 
         Returns
-          None
+          Sum of squares error of the last network recall on the input data.
 
         """
 
@@ -184,6 +184,8 @@ class MultilayerPerceptron:
                 np.random.shuffle(node_order)
                 inputs = inputs[node_order, :]
                 targets = targets[node_order, :]
+
+        return error
 
     def mlpfwd(self, inputs):
         """ Run the network forward """
