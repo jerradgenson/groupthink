@@ -37,6 +37,34 @@ class MultilayerPerceptron:
     def train_with_early_stopping(self, training_inputs, training_targets,
                                   validation_inputs, validation_targets,
                                   learning_rate, iterations=100, max_epoch=-1):
+        """
+        Train the neural network using backpropagation and early stopping.
+        Stop training when the validation set error consistently increases.
+
+        Args
+          training_inputs: Training inputs to the network as a numpy array of
+                           arrays, where each inner array is one set of inputs.
+          training_targets: Target outputs for the network as a numpy array of
+                            arrays, where each inner array is one set of target
+                            outputs. Target arrays must match the order of input
+                            arrays.
+          validation_inputs: Similar to training_inputs, but used to determine
+                             when the early stopping condition has been met.
+          validation_targets: Similar to trainings_targets, but used to determine
+                              when the early stopping condition has been met.
+          learning_rate: A float between 0 and 1 that determines the magnitude
+                         of updates to the network's weights. A high learning
+                         rate will cause the network to converge faster, but
+                         might negatively impact the precision/solution quality.
+          iterations: Number of iterations to run the training algorithm per epoch.
+                      Defaults to 100.
+          max_epoch: Maximum number of "runs" of the training algorithm. A value
+                     <= 0 indicates no limit. Defaults to -1.
+
+        Returns
+          Sum of squares error of the last network recall on the validation data.
+
+        """
 
         valid = np.concatenate(
             (validation_inputs, -np.ones((np.shape(validation_inputs)[0], 1))), axis=1)
