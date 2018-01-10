@@ -218,21 +218,29 @@ class MultilayerPerceptron:
 
         """
 
+        # Compute hidden layer outputs from network inputs and hidden layer weights.
         self.hidden_outputs = np.dot(inputs, self.hidden_weights)
+
+        # Always use logistic activation function for the hidden layer.
         self.hidden_outputs = (
             1.0 / (1.0 + np.exp(-self.beta * self.hidden_outputs)))
 
+        # Concatenate bias node onto hidden layer outputs.
         self.hidden_outputs = np.concatenate(
             (self.hidden_outputs, -np.ones((np.shape(inputs)[0], 1))), axis=1)
 
+        # Compute network outputs from hidden layer outputs and output layer weights.
         network_outputs = np.dot(self.hidden_outputs, self.output_weights)
         if self.output_type == OutputType.LINEAR:
+            # Use linear activation (null activation function) for regression.
             return network_outputs
 
         elif self.output_type == OutputType.LOGISTIC:
+            # Use logistic activation function for classification.
             return 1.0 / (1.0 + np.exp(-self.beta * network_outputs))
 
         elif self.output_type == OutputType.SOFTMAX:
+            # Use soft-max activation function for 1-of-N classification.
             normalisers = np.sum(np.exp(network_outputs), axis=1) * \
                 np.ones((1, np.shape(network_outputs)[0]))
 
