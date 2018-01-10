@@ -250,17 +250,34 @@ class MultilayerPerceptron:
             raise InvalidOutputTypeError(
                 'output_type not member of OutputType')
 
-    def confmat(self, inputs, targets):
-        """Confusion matrix"""
+    def generate_confusion_matrix(self, inputs, targets):
+        """
+        Generate a confusion matrix to show how well the network classifies data.
 
-        # Add the inputs that match the bias node
+        Args
+          inputs: Training inputs to the network as a numpy array of arrays,
+                  where each inner array is one set of inputs.
+          targets: Target outputs for the network as a numpy array of arrays,
+                   where each inner array is one set of target outputs. Target
+                   arrays must match the order of input arrays.
+
+        Returns
+          A numpy array of arrays representing the confusion matrix data.
+
+        """
+
+        # Add the inputs that match the bias node.
         inputs = np.concatenate(
             (inputs, -np.ones((np.shape(inputs)[0], 1))), axis=1)
 
+        # Run the network forward to get the outputs.
         outputs = self.recall(inputs)
-        nclasses = np.shape(targets)[1]
-        if nclasses == 1:
-            nclasses = 2
+
+        # Compute the number of distinct classifications.
+        classifications = np.shape(targets)[1]
+        if classifications == 1:
+            # Logistic classification
+            classifications = 2
             outputs = np.where(outputs > 0.5, 1, 0)
 
         else:
@@ -268,16 +285,21 @@ class MultilayerPerceptron:
             outputs = np.argmax(outputs, 1)
             targets = np.argmax(targets, 1)
 
-        cm = np.zeros((nclasses, nclasses))
-        for i in range(nclasses):
-            for j in range(nclasses):
-                cm[i, j] = np.sum(np.where(outputs == i, 1, 0)
-                                  * np.where(targets == j, 1, 0))
+        # Initialize the confusion matrix arrays.
+        confusion_matrix = np.zeros((classifications, classifications))
+
+        # Read classification data into the confusion matrix.
+        for i in range(classifications):
+            for j in range(classifications):
+                confusion_matrix[i, j] = np.sum(np.where(outputs == i, 1, 0)
+                                                * np.where(targets == j, 1, 0))
 
         logger.info("Confusion matrix is:")
-        logger.info(str(cm))
-        logger.info("Percentage Correct: ", np.trace(cm) / np.sum(cm) * 100)
-        return cm
+        logger.info(str(confusion_matrix))
+        logger.info("Percentage Correct: ", np.trace(
+            confusion_matrix) / np.sum(confusion_matrix) * 100)
+
+        return confusion_matrix
 
 
 class InvalidOutputTypeError(Exception):
