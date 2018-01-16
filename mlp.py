@@ -30,8 +30,6 @@ class MultilayerPerceptron:
       hidden_node_count: Number of hidden nodes in the network's hidden layer.
       output_node_count: Number of output nodes.
       beta: A constant in the logistic activation equation. Defaults to 1.
-      momentum: The amount of "momentum" to conserve during training as a float
-                between 0 and 1. Defaults to 0.9.
       output_type: Activation function to use at the output nodes. Must be
                    a member of OutputType. Defaults to LOGISTIC.
       bias: Add bias nodes of -1 into the inputs array. Defaults to True.
@@ -39,10 +37,9 @@ class MultilayerPerceptron:
     """
 
     def __init__(self, input_node_count, hidden_node_count, output_node_count,
-                 beta=1, momentum=0.9, output_type=OutputType.LOGISTIC, bias=True):
+                 beta=1, output_type=OutputType.LOGISTIC, bias=True):
 
         self.beta = beta
-        self.momentum = momentum
         self.output_type = output_type
         self.recall = partial(self._recall, bias)
 
@@ -55,7 +52,8 @@ class MultilayerPerceptron:
 
     def train_with_early_stopping(self, training_inputs, training_targets,
                                   validation_inputs, validation_targets,
-                                  learning_rate, iterations=100, max_epoch=-1):
+                                  learning_rate, iterations=100, max_epoch=-1,
+                                  momentum=0.9):
         """
         Train the neural network using backpropagation and early stopping.
         Stop training when the validation set error consistently increases.
@@ -79,6 +77,8 @@ class MultilayerPerceptron:
                       Defaults to 100.
           max_epoch: Maximum number of "runs" of the training algorithm. A value
                      <= 0 indicates no limit. Defaults to -1.
+          momentum: The amount of "momentum" to conserve during training as a float
+                    between 0 and 1. Defaults to 0.9.
 
         Returns
           Sum of squares error of the last network recall on the validation data.
@@ -104,7 +104,7 @@ class MultilayerPerceptron:
             current_epoch += 1
             logger.info(current_epoch)
             self.train(training_inputs, training_targets,
-                       learning_rate, iterations)
+                       learning_rate, iterations, momentum)
             oldest_error = previous_error
             previous_error = current_error
             output_value = self._recall(False, valid)
@@ -114,7 +114,8 @@ class MultilayerPerceptron:
         logger.info("Stopped", current_error, previous_error, oldest_error)
         return current_error
 
-    def train(self, inputs, targets, learning_rate, iterations, randomize=False):
+    def train(self, inputs, targets, learning_rate, iterations, randomize=False,
+              momentum=0.9):
         """
         Train the neural network using backpropagation.
         Training happens en batch, which means all the training data is fed to
@@ -138,6 +139,8 @@ class MultilayerPerceptron:
           randomize: A flag that indicates whether or not to randomize inputs
                      and targets. This can improve the speed at which the
                      training algorithm converges. Default value is False.
+          momentum: The amount of "momentum" to conserve during training as a float
+                    between 0 and 1. Defaults to 0.9.
 
         Returns
           Sum of squares error of the last network recall on the input data.
@@ -189,10 +192,10 @@ class MultilayerPerceptron:
             # "momentum." This is done to help prevent the algorithm from
             # becoming stuck in local optima.
             hidden_layer_updates = learning_rate * (np.dot(np.transpose(inputs),
-                                                           deltah[:, :-1])) + self.momentum * hidden_layer_updates
+                                                           deltah[:, :-1])) + momentum * hidden_layer_updates
 
             output_layer_updates = learning_rate * (np.dot(np.transpose(self.hidden_outputs),
-                                                           deltao)) + self.momentum * output_layer_updates
+                                                           deltao)) + momentum * output_layer_updates
 
             # Apply weight update values to hidden and output layer weights.
             self.hidden_weights -= hidden_layer_updates
