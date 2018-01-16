@@ -1,4 +1,6 @@
 """
+BSD 3-Clause License
+
 Copyright (c) 2018, Jerrad Genson
 All rights reserved.
 
@@ -27,8 +29,8 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-Inspired by code from "Machine Learning: An Algorithmic Perspective" by
-Dr. Stephen Marsland (http://stephenmonika.net).
+Derived from code in "Machine Learning: An Algorithmic Perspective" by
+Dr. Stephen Marsland.
 
 """
 
