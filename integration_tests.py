@@ -42,8 +42,8 @@ class TestMLP(unittest.TestCase):
     def test_logical_and(self):
         and_data = np.array([[0, 0, 0], [0, 1, 0], [1, 0, 0], [1, 1, 1]])
         neural_net = mlp.MultilayerPerceptron(2, 2, 1)
-        neural_net.mlptrain(and_data[:, 0:2], and_data[:, 2:3], 0.25, 1001)
-        confusion_matrix = neural_net.confmat(
+        neural_net.train(and_data[:, 0:2], and_data[:, 2:3], 0.25, 1001)
+        confusion_matrix = neural_net.generate_confusion_matrix(
             and_data[:, 0:2], and_data[:, 2:3])
 
         expected = np.array([[3., 0.], [0., 1.]])
@@ -54,13 +54,47 @@ class TestMLP(unittest.TestCase):
         neural_net = mlp.MultilayerPerceptron(2, 2, 1,
                                               output_type=mlp.OutputType.LOGISTIC)
 
-        neural_net.mlptrain(xor_data[:, 0:2], xor_data[:, 2:3], 0.25, 5001)
-        neural_net.confmat(xor_data[:, 0:2], xor_data[:, 2:3])
-        confusion_matrix = neural_net.confmat(
+        neural_net.train(xor_data[:, 0:2], xor_data[:, 2:3], 0.25, 5001)
+        confusion_matrix = neural_net.generate_confusion_matrix(
             xor_data[:, 0:2], xor_data[:, 2:3])
 
         expected = np.array([[2., 0.], [0., 2.]])
         self.assertTrue((confusion_matrix == expected).all())
+
+    def test_sine_regression(self):
+        errors = []
+        for iteration in range(10):
+            input_data = np.ones((1, 40)) * np.linspace(0, 1, 40)
+            target_data = (np.sin(2 * np.pi * input_data) +
+                           np.cos(4 * np.pi * input_data) +
+                           np.random.randn(40) * 0.2)
+
+            input_data = np.transpose(input_data)
+            target_data = np.transpose(target_data)
+
+            training_inputs = input_data[0::2, :]
+            testing_inputs = input_data[1::4, :]
+            validation_inputs = input_data[3::4, :]
+            training_targets = target_data[0::2, :]
+            testing_targets = target_data[1::4, :]
+            validation_targets = target_data[3::4, :]
+
+            neural_net = mlp.MultilayerPerceptron(1, 5, 1,
+                                                  output_type=mlp.OutputType.LINEAR)
+
+            neural_net.train_with_early_stopping(training_inputs, training_targets,
+                                                 validation_inputs, validation_targets,
+                                                 0.25)
+
+            training_dataset_count = np.shape(validation_inputs)[0]
+            testing_inputs = np.concatenate(
+                (testing_inputs, -np.ones((training_dataset_count, 1))), axis=1)
+
+            testing_outputs = neural_net.recall(testing_inputs)
+            errors.append(0.5 * np.sum((testing_targets - testing_outputs)**2))
+
+        average_error = np.median(errors)
+        self.assertLessEqual(average_error, 0.5)
 
 
 if __name__ == '__main__':
