@@ -86,10 +86,6 @@ class TestMLP(unittest.TestCase):
                                                  validation_inputs, validation_targets,
                                                  0.25)
 
-            training_dataset_count = np.shape(validation_inputs)[0]
-            testing_inputs = np.concatenate(
-                (testing_inputs, -np.ones((training_dataset_count, 1))), axis=1)
-
             testing_outputs = neural_net.recall(testing_inputs)
             errors.append(0.5 * np.sum((testing_targets - testing_outputs)**2))
 

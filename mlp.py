@@ -104,7 +104,7 @@ class MultilayerPerceptron:
                        learning_rate, iterations)
             oldest_error = previous_error
             previous_error = current_error
-            output_value = self.recall(valid)
+            output_value = self.recall(valid, bias=False)
             current_error = (
                 0.5 * np.sum((validation_targets - output_value)**2))
 
@@ -155,7 +155,7 @@ class MultilayerPerceptron:
         output_layer_updates = np.zeros((np.shape(self.output_weights)))
 
         for iteration in range(iterations):
-            self.outputs = self.recall(inputs)
+            self.outputs = self.recall(inputs, bias=False)
             error = 0.5 * np.sum((self.outputs - targets)**2)
             if (np.mod(iteration, 100) == 0):
                 logger.info("Iteration: ", iteration, " Error: ", error)
@@ -203,7 +203,7 @@ class MultilayerPerceptron:
 
         return error
 
-    def recall(self, inputs):
+    def recall(self, inputs, bias=True):
         """ 
         Perform a recall on a given set of inputs.
         In other words, run the network to make a prediction or classification.
@@ -211,12 +211,19 @@ class MultilayerPerceptron:
         Args
           inputs: Input data to the network as a numpy array of arrays, where 
                   each inner array is one set of inputs.
+          bias: Add bias nodes of -1 into the inputs array.
 
         Returns
           A numpy array of arrays representing the network's outputs, where each
           inner array corresponds to an inner array in the inputs.
 
         """
+
+        if bias:
+            # Add the inputs that match the bias node
+            dataset_count = np.shape(inputs)[0]
+            inputs = np.concatenate(
+                (inputs, -np.ones((dataset_count, 1))), axis=1)
 
         # Compute hidden layer outputs from network inputs and hidden layer weights.
         self.hidden_outputs = np.dot(inputs, self.hidden_weights)
@@ -265,10 +272,6 @@ class MultilayerPerceptron:
           A numpy array of arrays representing the confusion matrix data.
 
         """
-
-        # Add the inputs that match the bias node.
-        inputs = np.concatenate(
-            (inputs, -np.ones((np.shape(inputs)[0], 1))), axis=1)
 
         # Run the network forward to get the outputs.
         outputs = self.recall(inputs)
