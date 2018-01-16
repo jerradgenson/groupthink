@@ -9,6 +9,7 @@
 
 import logging
 from enum import Enum
+from functools import partial
 
 import numpy as np
 
@@ -33,15 +34,17 @@ class MultilayerPerceptron:
                 between 0 and 1. Defaults to 0.9.
       output_type: Activation function to use at the output nodes. Must be
                    a member of OutputType. Defaults to LOGISTIC.
+      bias: Add bias nodes of -1 into the inputs array. Defaults to True.
 
     """
 
     def __init__(self, input_node_count, hidden_node_count, output_node_count,
-                 beta=1, momentum=0.9, output_type=OutputType.LOGISTIC):
+                 beta=1, momentum=0.9, output_type=OutputType.LOGISTIC, bias=True):
 
         self.beta = beta
         self.momentum = momentum
         self.output_type = output_type
+        self.recall = partial(self._recall, bias)
 
         # Initialise network
         self.hidden_weights = (np.random.rand(
@@ -104,7 +107,7 @@ class MultilayerPerceptron:
                        learning_rate, iterations)
             oldest_error = previous_error
             previous_error = current_error
-            output_value = self.recall(valid, bias=False)
+            output_value = self._recall(False, valid)
             current_error = (
                 0.5 * np.sum((validation_targets - output_value)**2))
 
@@ -155,7 +158,7 @@ class MultilayerPerceptron:
         output_layer_updates = np.zeros((np.shape(self.output_weights)))
 
         for iteration in range(iterations):
-            self.outputs = self.recall(inputs, bias=False)
+            self.outputs = self._recall(False, inputs)
             error = 0.5 * np.sum((self.outputs - targets)**2)
             if (np.mod(iteration, 100) == 0):
                 logger.info("Iteration: ", iteration, " Error: ", error)
@@ -203,15 +206,14 @@ class MultilayerPerceptron:
 
         return error
 
-    def recall(self, inputs, bias=True):
+    def _recall(self, bias, inputs):
         """ 
         Perform a recall on a given set of inputs.
         In other words, run the network to make a prediction or classification.
 
         Args
           inputs: Input data to the network as a numpy array of arrays, where 
-                  each inner array is one set of inputs.
-          bias: Add bias nodes of -1 into the inputs array.
+                  each inner array is one set of inputs.          
 
         Returns
           A numpy array of arrays representing the network's outputs, where each
