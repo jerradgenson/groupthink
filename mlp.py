@@ -36,7 +36,7 @@ Dr. Stephen Marsland.
 
 import logging
 from enum import Enum
-from functools import partial
+from abc import ABC, abstractmethod
 
 import numpy as np
 
@@ -47,7 +47,53 @@ LearnerType = Enum(
 logger = logging.getLogger(__name__)
 
 
-class MultilayerPerceptron:
+class Learner(ABC):
+    """
+    Abstract base class for all Learner classes.
+    Child classes must call superclass constructor.
+
+    Args
+      classes: A sequence of classification names. This must be defined for
+               ONE_OF_N learners. Defaults to None.
+
+    """
+
+    def __init__(self, classes=None):
+        self.train = self._train
+        self.recall = self._recall
+
+    @abstractmethod
+    def _train(self, inputs, targets):
+        """
+        Train the Learner on the given inputs and targets data.
+
+        Args
+          inputs: Training inputs to the Learner as a numpy array of arrays,
+                  where each inner array is one set of inputs.
+          targets: Target outputs for the Learner as a numpy array of arrays,
+                   where each inner array is one set of target outputs. Target
+                   arrays must match the order of input arrays.
+
+        Returns
+          Sum of squares error of the last network recall on the input data.
+
+        """
+
+    @abstractmethod
+    def _recall(self, inputs):
+        """
+        Args
+          inputs: Input data to the Learner as a numpy array of arrays, where
+                  each inner array is one set of inputs.
+
+        Returns
+          A numpy array of arrays representing the Learner's outputs, where each
+          inner array corresponds to an inner array in the inputs.
+
+        """
+
+
+class MultilayerPerceptron(Learner):
     """
     A multilayer perceptron learner.
     Multilayer perceptron is a type of neural network that features an input
@@ -71,7 +117,7 @@ class MultilayerPerceptron:
 
         self.beta = beta
         self.learner_type = learner_type
-        self.recall = partial(self._recall, bias)
+        self.bias = bias
         if learner_type in (LearnerType.CLASSIFICATION, LearnerType.REGRESSION):
             output_node_count = 1
 
@@ -92,6 +138,8 @@ class MultilayerPerceptron:
 
         self.output_weights = (np.random.rand(hidden_node_count + 1,
                                               output_node_count) - 0.5) * 2 / np.sqrt(hidden_node_count)
+
+        return super().__init__(classes=classes)
 
     def train_with_early_stopping(self, training_inputs, training_targets,
                                   validation_inputs, validation_targets,
@@ -146,19 +194,19 @@ class MultilayerPerceptron:
 
             current_epoch += 1
             logger.info(current_epoch)
-            self.train(training_inputs, training_targets,
-                       learning_rate, iterations, momentum)
+            self._train(training_inputs, training_targets,
+                        learning_rate, iterations, momentum)
             oldest_error = previous_error
             previous_error = current_error
-            output_value = self._recall(False, valid)
+            output_value = self.__recall(False, valid)
             current_error = (
                 0.5 * np.sum((validation_targets - output_value)**2))
 
         logger.info("Stopped", current_error, previous_error, oldest_error)
         return current_error
 
-    def train(self, inputs, targets, learning_rate, iterations, randomize=False,
-              momentum=0.9):
+    def _train(self, inputs, targets, learning_rate, iterations, randomize=False,
+               momentum=0.9):
         """
         Train the neural network using backpropagation.
         Training happens en batch, which means all the training data is fed to
@@ -204,7 +252,7 @@ class MultilayerPerceptron:
         output_layer_updates = np.zeros((np.shape(self.output_weights)))
 
         for iteration in range(iterations):
-            self.outputs = self._recall(False, inputs)
+            self.outputs = self.__recall(False, inputs)
             error = 0.5 * np.sum((self.outputs - targets)**2)
             if (np.mod(iteration, 100) == 0):
                 logger.info("Iteration: ", iteration, " Error: ", error)
@@ -252,7 +300,7 @@ class MultilayerPerceptron:
 
         return error
 
-    def _recall(self, bias, inputs):
+    def __recall(self, bias, inputs):
         """ 
         Perform a recall on a given set of inputs.
         In other words, run the network to make a prediction or classification.
@@ -304,6 +352,11 @@ class MultilayerPerceptron:
         else:
             raise InvalidLearnerTypeError(
                 'learner_type not member of LearnerType')
+
+    def _recall(self, inputs):
+        return self.__recall(self.bias, inputs)
+
+    _recall.__doc__ = __recall.__doc__
 
     def generate_confusion_matrix(self, inputs, targets):
         """
