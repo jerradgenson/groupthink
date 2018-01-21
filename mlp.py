@@ -43,6 +43,7 @@ import numpy as np
 
 LearnerType = Enum(
     'LearnerType', 'CLASSIFICATION REGRESSION ONE_OF_N', module=__name__)
+
 logger = logging.getLogger(__name__)
 
 
@@ -56,7 +57,8 @@ class MultilayerPerceptron:
     Args
       input_node_count: Number of inputs to the network.
       hidden_node_count: Number of hidden nodes in the network's hidden layer.
-      output_node_count: Number of output nodes.
+      classes: A sequence of classification names. This must be defined for
+               ONE_OF_N learners. Defaults to None.
       beta: A constant in the logistic activation equation. Defaults to 1.
       learner_type: Activation function to use at the output nodes. Must be
                    a member of LearnerType. Defaults to CLASSIFICATION.
@@ -64,12 +66,25 @@ class MultilayerPerceptron:
 
     """
 
-    def __init__(self, input_node_count, hidden_node_count, output_node_count,
+    def __init__(self, input_node_count, hidden_node_count, classes=None,
                  beta=1, learner_type=LearnerType.CLASSIFICATION, bias=True):
 
         self.beta = beta
         self.learner_type = learner_type
         self.recall = partial(self._recall, bias)
+        if learner_type in (LearnerType.CLASSIFICATION, LearnerType.REGRESSION):
+            output_node_count = 1
+
+        elif learner_type == LearnerType.ONE_OF_N:
+            output_node_count = len(classes)
+
+        else:
+            raise InvalidLearnerTypeError(
+                'learner_type not member of LearnerType')
+
+        if learner_type in (LearnerType.CLASSIFICATION, LearnerType.ONE_OF_N) and not classes:
+            raise ValueError(
+                'classes can not be None for CLASSIFICATION or ONE_OF_N learners.')
 
         # Initialise network
         self.hidden_weights = (np.random.rand(
