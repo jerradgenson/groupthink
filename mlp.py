@@ -41,7 +41,8 @@ from functools import partial
 import numpy as np
 
 
-OutputType = Enum('OutputType', 'LINEAR LOGISTIC SOFTMAX', module=__name__)
+LearnerType = Enum(
+    'LearnerType', 'CLASSIFICATION REGRESSION ONE_OF_N', module=__name__)
 logger = logging.getLogger(__name__)
 
 
@@ -57,17 +58,17 @@ class MultilayerPerceptron:
       hidden_node_count: Number of hidden nodes in the network's hidden layer.
       output_node_count: Number of output nodes.
       beta: A constant in the logistic activation equation. Defaults to 1.
-      output_type: Activation function to use at the output nodes. Must be
-                   a member of OutputType. Defaults to LOGISTIC.
+      learner_type: Activation function to use at the output nodes. Must be
+                   a member of LearnerType. Defaults to CLASSIFICATION.
       bias: Add bias nodes of -1 into the inputs array. Defaults to True.
 
     """
 
     def __init__(self, input_node_count, hidden_node_count, output_node_count,
-                 beta=1, output_type=OutputType.LOGISTIC, bias=True):
+                 beta=1, learner_type=LearnerType.CLASSIFICATION, bias=True):
 
         self.beta = beta
-        self.output_type = output_type
+        self.learner_type = learner_type
         self.recall = partial(self._recall, bias)
 
         # Initialise network
@@ -194,20 +195,20 @@ class MultilayerPerceptron:
                 logger.info("Iteration: ", iteration, " Error: ", error)
 
             # Compute the output layer error gradient for different activation functions.
-            if self.output_type == OutputType.LINEAR:
+            if self.learner_type == LearnerType.REGRESSION:
                 deltao = (self.outputs - targets) / training_dataset_count
 
-            elif self.output_type == OutputType.LOGISTIC:
+            elif self.learner_type == LearnerType.CLASSIFICATION:
                 deltao = self.beta * (self.outputs - targets) * \
                     self.outputs * (1.0 - self.outputs)
 
-            elif self.output_type == OutputType.SOFTMAX:
+            elif self.learner_type == LearnerType.ONE_OF_N:
                 deltao = (self.outputs - targets) * (self.outputs *
                                                      (-self.outputs) + self.outputs) / training_dataset_count
 
             else:
-                raise InvalidOutputTypeError(
-                    'output_type not member of OutputType')
+                raise InvalidLearnerTypeError(
+                    'learner_type not member of LearnerType')
 
             # Compute the hidden layer error gradient for logistic activation function.
             deltah = self.hidden_outputs * self.beta * \
@@ -270,15 +271,15 @@ class MultilayerPerceptron:
 
         # Compute network outputs from hidden layer outputs and output layer weights.
         network_outputs = np.dot(self.hidden_outputs, self.output_weights)
-        if self.output_type == OutputType.LINEAR:
+        if self.learner_type == LearnerType.REGRESSION:
             # Use linear activation (null activation function) for regression.
             return network_outputs
 
-        elif self.output_type == OutputType.LOGISTIC:
+        elif self.learner_type == LearnerType.CLASSIFICATION:
             # Use logistic activation function for classification.
             return 1.0 / (1.0 + np.exp(-self.beta * network_outputs))
 
-        elif self.output_type == OutputType.SOFTMAX:
+        elif self.learner_type == LearnerType.ONE_OF_N:
             # Use soft-max activation function for 1-of-N classification.
             normalisers = np.sum(np.exp(network_outputs), axis=1) * \
                 np.ones((1, np.shape(network_outputs)[0]))
@@ -286,8 +287,8 @@ class MultilayerPerceptron:
             return np.transpose(np.transpose(np.exp(network_outputs)) / normalisers)
 
         else:
-            raise InvalidOutputTypeError(
-                'output_type not member of OutputType')
+            raise InvalidLearnerTypeError(
+                'learner_type not member of LearnerType')
 
     def generate_confusion_matrix(self, inputs, targets):
         """
@@ -337,7 +338,7 @@ class MultilayerPerceptron:
         return confusion_matrix
 
 
-class InvalidOutputTypeError(Exception):
+class InvalidLearnerTypeError(Exception):
     """
     Indicates that an invalid output type was specified.
     """

@@ -54,7 +54,7 @@ class TestMLP(unittest.TestCase):
     def test_logical_xor(self):
         xor_data = np.array([[0, 0, 0], [0, 1, 1], [1, 0, 1], [1, 1, 0]])
         neural_net = mlp.MultilayerPerceptron(2, 2, 1,
-                                              output_type=mlp.OutputType.LOGISTIC)
+                                              learner_type=mlp.LearnerType.CLASSIFICATION)
 
         neural_net.train(xor_data[:, 0:2], xor_data[:, 2:3], 0.25, 5001)
         confusion_matrix = neural_net.generate_confusion_matrix(
@@ -82,7 +82,7 @@ class TestMLP(unittest.TestCase):
             validation_targets = target_data[3::4, :]
 
             neural_net = mlp.MultilayerPerceptron(1, 5, 1,
-                                                  output_type=mlp.OutputType.LINEAR)
+                                                  learner_type=mlp.LearnerType.REGRESSION)
 
             neural_net.train_with_early_stopping(training_inputs, training_targets,
                                                  validation_inputs, validation_targets,
