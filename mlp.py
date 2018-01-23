@@ -58,9 +58,47 @@ class Learner(ABC):
 
     """
 
-    def __init__(self, classes=None):
+    def __init__(self, classes=None, learner_type=LearnerType.CLASSIFICATION):
         self.train = self._train
         self.recall = self._recall
+        self.classes_of_outputs = None
+        if learner_type == LearnerType.ONE_OF_N and classes:
+            def classes_of_outputs(self, outputs):
+                output_classes = np.empty([len(outputs)], type(classes[0]))
+                for output_index, output in enumerate(outputs):
+                    maximum = np.amax(output)
+                    class_index = np.where(output == maximum)
+                    output_class = np.array(classes[class_index])
+                    output_classes[output_index] = output_class
+
+                return output_classes
+
+            self.classes_of_outputs = classes_of_outputs
+
+        elif learner_type == LearnerType.CLASSIFICATION and classes:
+            # Create mapping from output value to class.
+            increment = 1 / len(classes)
+            bounds = [count * increment for count in range(len(classes))]
+
+            def class_of_output(output):
+                current_class = None
+                for output_class, bound in zip(classes, bounds):
+                    if output >= bound:
+                        current_class = output_class
+
+                    else:
+                        break
+
+                return current_class
+
+            def classes_of_outputs(self, outputs):
+                output_classes = np.empty(len(outputs), type(classes[0]))
+                for index, output in enumerate(outputs):
+                    output_classes[index] = np.array(class_of_output(output))
+
+                return output_classes
+
+            self.classes_of_outputs = class_of_output
 
     @abstractmethod
     def _train(self, inputs, targets):
@@ -91,6 +129,15 @@ class Learner(ABC):
           inner array corresponds to an inner array in the inputs.
 
         """
+
+    def recall(self, inputs):
+        outputs = self._recall(inputs)
+        if self.classes_of_outputs:
+            outputs = self.classes_of_outputs(outputs)
+
+        return outputs
+
+    recall.__doc__ = _recall.__doc__
 
 
 class MultilayerPerceptron(Learner):
@@ -128,10 +175,6 @@ class MultilayerPerceptron(Learner):
             raise InvalidLearnerTypeError(
                 'learner_type not member of LearnerType')
 
-        if learner_type in (LearnerType.CLASSIFICATION, LearnerType.ONE_OF_N) and not classes:
-            raise ValueError(
-                'classes can not be None for CLASSIFICATION or ONE_OF_N learners.')
-
         # Initialise network
         self.hidden_weights = (np.random.rand(
             input_node_count + 1, hidden_node_count) - 0.5) * 2 / np.sqrt(input_node_count)
@@ -139,7 +182,7 @@ class MultilayerPerceptron(Learner):
         self.output_weights = (np.random.rand(hidden_node_count + 1,
                                               output_node_count) - 0.5) * 2 / np.sqrt(hidden_node_count)
 
-        return super().__init__(classes=classes)
+        return super().__init__(classes=classes, learner_type=learner_type)
 
     def train_with_early_stopping(self, training_inputs, training_targets,
                                   validation_inputs, validation_targets,
