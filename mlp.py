@@ -60,16 +60,15 @@ class Learner(ABC):
 
     def __init__(self, classes=None, learner_type=LearnerType.CLASSIFICATION):
         self.train = self._train
-        self.recall = self._recall
         self.classes_of_outputs = None
         if learner_type == LearnerType.ONE_OF_N and classes:
             def classes_of_outputs(self, outputs):
-                output_classes = np.empty([len(outputs)], type(classes[0]))
+                output_classes = []
                 for output_index, output in enumerate(outputs):
                     maximum = np.amax(output)
                     class_index = np.where(output == maximum)
                     output_class = np.array(classes[class_index])
-                    output_classes[output_index] = output_class
+                    output_classes.append(output_class)
 
                 return output_classes
 
@@ -91,14 +90,15 @@ class Learner(ABC):
 
                 return current_class
 
-            def classes_of_outputs(self, outputs):
-                output_classes = np.empty(len(outputs), type(classes[0]))
+            def classes_of_outputs(outputs):
+                output_classes = []
                 for index, output in enumerate(outputs):
-                    output_classes[index] = np.array(class_of_output(output))
+                    output_class = class_of_output(output)
+                    output_classes.append(output_class)
 
                 return output_classes
 
-            self.classes_of_outputs = class_of_output
+            self.classes_of_outputs = classes_of_outputs
 
     @abstractmethod
     def _train(self, inputs, targets):
@@ -344,13 +344,13 @@ class MultilayerPerceptron(Learner):
         return error
 
     def __recall(self, bias, inputs):
-        """ 
+        """
         Perform a recall on a given set of inputs.
         In other words, run the network to make a prediction or classification.
 
         Args
-          inputs: Input data to the network as a numpy array of arrays, where 
-                  each inner array is one set of inputs.          
+          inputs: Input data to the network as a numpy array of arrays, where
+                  each inner array is one set of inputs.
 
         Returns
           A numpy array of arrays representing the network's outputs, where each
@@ -418,7 +418,7 @@ class MultilayerPerceptron(Learner):
         """
 
         # Run the network forward to get the outputs.
-        outputs = self.recall(inputs)
+        outputs = self._recall(inputs)
 
         # Compute the number of distinct classifications.
         classifications = np.shape(targets)[1]

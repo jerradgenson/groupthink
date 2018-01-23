@@ -51,6 +51,9 @@ class TestMLP(unittest.TestCase):
         expected = np.array([[3., 0.], [0., 1.]])
         self.assertTrue((confusion_matrix == expected).all())
 
+        output = neural_net.recall(and_data[:, 0:2])
+        self.assertEqual(output, ['false', 'false', 'false', 'true'])
+
     def test_logical_xor(self):
         xor_data = np.array([[0, 0, 0], [0, 1, 1], [1, 0, 1], [1, 1, 0]])
         neural_net = mlp.MultilayerPerceptron(2, 2, ('false', 'true'))
@@ -61,6 +64,9 @@ class TestMLP(unittest.TestCase):
 
         expected = np.array([[2., 0.], [0., 2.]])
         self.assertTrue((confusion_matrix == expected).all())
+
+        output = neural_net.recall(xor_data[:, 0:2])
+        self.assertEqual(output, ['false', 'true', 'true', 'false'])
 
     def test_sine_regression(self):
         errors = []
