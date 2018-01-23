@@ -43,7 +43,7 @@ class TestMLP(unittest.TestCase):
 
     def test_logical_and(self):
         and_data = np.array([[0, 0, 0], [0, 1, 0], [1, 0, 0], [1, 1, 1]])
-        neural_net = mlp.MultilayerPerceptron(2, 2, ('false', 'true'))
+        neural_net = mlp.MultilayerPerceptron(2, 2, (False, True))
         neural_net.train(and_data[:, 0:2], and_data[:, 2:3], 0.25, 1001)
         confusion_matrix = neural_net.generate_confusion_matrix(
             and_data[:, 0:2], and_data[:, 2:3])
@@ -52,11 +52,11 @@ class TestMLP(unittest.TestCase):
         self.assertTrue((confusion_matrix == expected).all())
 
         output = neural_net.recall(and_data[:, 0:2])
-        self.assertEqual(output, ['false', 'false', 'false', 'true'])
+        self.assertEqual(output, [False, False, False, True])
 
     def test_logical_xor(self):
         xor_data = np.array([[0, 0, 0], [0, 1, 1], [1, 0, 1], [1, 1, 0]])
-        neural_net = mlp.MultilayerPerceptron(2, 2, ('false', 'true'))
+        neural_net = mlp.MultilayerPerceptron(2, 2, (False, True))
 
         neural_net.train(xor_data[:, 0:2], xor_data[:, 2:3], 0.25, 5001)
         confusion_matrix = neural_net.generate_confusion_matrix(
@@ -66,7 +66,7 @@ class TestMLP(unittest.TestCase):
         self.assertTrue((confusion_matrix == expected).all())
 
         output = neural_net.recall(xor_data[:, 0:2])
-        self.assertEqual(output, ['false', 'true', 'true', 'false'])
+        self.assertEqual(output, [False, True, True, False])
 
     def test_sine_regression(self):
         errors = []
