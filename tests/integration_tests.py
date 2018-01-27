@@ -35,8 +35,10 @@ Dr. Stephen Marsland.
 """
 
 import unittest
+
 import numpy as np
-import mlp
+
+from learners import mlp
 from preprocessing import normalize
 
 
