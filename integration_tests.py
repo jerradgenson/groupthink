@@ -29,7 +29,7 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-Derived from code in "Machine Learning: An Algorithmic Perspective" by
+Inspired by code in "Machine Learning: An Algorithmic Perspective" by
 Dr. Stephen Marsland.
 
 """
@@ -37,6 +37,7 @@ Dr. Stephen Marsland.
 import unittest
 import numpy as np
 import mlp
+from preprocessing import normalize
 
 
 class TestMLP(unittest.TestCase):
@@ -44,7 +45,7 @@ class TestMLP(unittest.TestCase):
     def test_logical_and(self):
         and_data = np.array([[0, 0, 0], [0, 1, 0], [1, 0, 0], [1, 1, 1]])
         neural_net = mlp.MultilayerPerceptron(2, 2, (False, True))
-        neural_net.train(and_data[:, 0:2], and_data[:, 2:3], 0.25, 1001)
+        neural_net.train(and_data[:, 0:2], and_data[:, 2:], 0.25, 1001)
         confusion_matrix = neural_net.generate_confusion_matrix(
             and_data[:, 0:2], and_data[:, 2:3])
 
@@ -58,7 +59,7 @@ class TestMLP(unittest.TestCase):
         xor_data = np.array([[0, 0, 0], [0, 1, 1], [1, 0, 1], [1, 1, 0]])
         neural_net = mlp.MultilayerPerceptron(2, 2, (False, True))
 
-        neural_net.train(xor_data[:, 0:2], xor_data[:, 2:3], 0.25, 5001)
+        neural_net.train(xor_data[:, 0:2], xor_data[:, 2:], 0.25, 5001)
         confusion_matrix = neural_net.generate_confusion_matrix(
             xor_data[:, 0:2], xor_data[:, 2:3])
 
@@ -78,6 +79,8 @@ class TestMLP(unittest.TestCase):
 
             input_data = np.transpose(input_data)
             target_data = np.transpose(target_data)
+            input_data = normalize(input_data)
+            target_data = normalize(target_data)
 
             training_inputs = input_data[0::2, :]
             testing_inputs = input_data[1::4, :]
