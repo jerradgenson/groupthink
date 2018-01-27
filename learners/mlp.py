@@ -35,109 +35,12 @@ Dr. Stephen Marsland.
 """
 
 import logging
-from enum import Enum
-from abc import ABC, abstractmethod
 
 import numpy as np
 
-
-LearnerType = Enum(
-    'LearnerType', 'CLASSIFICATION REGRESSION ONE_OF_N', module=__name__)
+from .learner import LearnerType, Learner, InvalidLearnerTypeError
 
 logger = logging.getLogger(__name__)
-
-
-class Learner(ABC):
-    """
-    Abstract base class for all Learner classes.
-    Child classes must call superclass constructor.
-
-    Args
-      classes: A sequence of classification names. This must be defined for
-               ONE_OF_N learners. Defaults to None.
-
-    """
-
-    def __init__(self, classes=None, learner_type=LearnerType.CLASSIFICATION):
-        self.train = self._train
-        self.classes_of_outputs = None
-        if learner_type == LearnerType.ONE_OF_N and classes:
-            def classes_of_outputs(self, outputs):
-                output_classes = []
-                for output_index, output in enumerate(outputs):
-                    maximum = np.amax(output)
-                    class_index = np.where(output == maximum)
-                    output_class = np.array(classes[class_index])
-                    output_classes.append(output_class)
-
-                return output_classes
-
-            self.classes_of_outputs = classes_of_outputs
-
-        elif learner_type == LearnerType.CLASSIFICATION and classes:
-            # Create mapping from output value to class.
-            increment = 1 / len(classes)
-            bounds = [count * increment for count in range(len(classes))]
-
-            def class_of_output(output):
-                current_class = None
-                for output_class, bound in zip(classes, bounds):
-                    if output >= bound:
-                        current_class = output_class
-
-                    else:
-                        break
-
-                return current_class
-
-            def classes_of_outputs(outputs):
-                output_classes = []
-                for index, output in enumerate(outputs):
-                    output_class = class_of_output(output)
-                    output_classes.append(output_class)
-
-                return output_classes
-
-            self.classes_of_outputs = classes_of_outputs
-
-    @abstractmethod
-    def _train(self, inputs, targets):
-        """
-        Train the Learner on the given inputs and targets data.
-
-        Args
-          inputs: Training inputs to the Learner as a numpy array of arrays,
-                  where each inner array is one set of inputs.
-          targets: Target outputs for the Learner as a numpy array of arrays,
-                   where each inner array is one set of target outputs. Target
-                   arrays must match the order of input arrays.
-
-        Returns
-          Sum of squares error of the last network recall on the input data.
-
-        """
-
-    @abstractmethod
-    def _recall(self, inputs):
-        """
-        Args
-          inputs: Input data to the Learner as a numpy array of arrays, where
-                  each inner array is one set of inputs.
-
-        Returns
-          A numpy array of arrays representing the Learner's outputs, where each
-          inner array corresponds to an inner array in the inputs.
-
-        """
-
-    def recall(self, inputs):
-        outputs = self._recall(inputs)
-        if self.classes_of_outputs:
-            outputs = self.classes_of_outputs(outputs)
-
-        return outputs
-
-    recall.__doc__ = _recall.__doc__
 
 
 class MultilayerPerceptron(Learner):
@@ -447,9 +350,3 @@ class MultilayerPerceptron(Learner):
             confusion_matrix) / np.sum(confusion_matrix) * 100)
 
         return confusion_matrix
-
-
-class InvalidLearnerTypeError(Exception):
-    """
-    Indicates that an invalid output type was specified.
-    """
