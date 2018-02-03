@@ -281,19 +281,35 @@ class MultilayerPerceptron(Learner):
 
         return error
 
-    def _logistic(self, weights):
+    def _logistic(self, layer_values):
         """
         Logistic activation function.
         
         Args
-          weights: A numpy array of network layer outputs.
+          layer_values: A numpy array of network layer input or output values.
 
         Returns
           The value of the weights with logistic activation applied.
 
         """
 
-        return 1.0 / (1.0 + np.exp(-self.beta * weights))
+        return 1.0 / (1.0 + np.exp(-self.beta * layer_values))
+
+    def _concat_bias(self, layer_values, rows):
+        """
+        Concatenate bias node to network layer values.
+
+        Args
+          layer_values: A numpy array of network layer input or output values.
+          rows: The number of rows in layer_values. If there is only one set of
+                values in the array, this will be 1.
+
+        Returns
+          layer_values with a bias node contatenated onto the end.
+
+        """
+
+        return np.concatenate((layer_values, -np.ones((rows, 1))), axis=1)
 
     def __recall(self, bias, inputs):
         """
@@ -310,11 +326,10 @@ class MultilayerPerceptron(Learner):
 
         """
 
+        dataset_rows = np.shape(inputs)[0]
         if bias:
-            # Add the inputs that match the bias node
-            dataset_count = np.shape(inputs)[0]
-            inputs = np.concatenate(
-                (inputs, -np.ones((dataset_count, 1))), axis=1)
+            # Add the inputs that match the bias node.           
+            inputs = self._concat_bias(inputs, dataset_rows)
 
         # Compute hidden layer outputs from network inputs and hidden layer weights.
         self.hidden_outputs1 = np.dot(inputs, self.hidden_weights1)
@@ -323,18 +338,14 @@ class MultilayerPerceptron(Learner):
         self.hidden_outputs1 = self._logistic(self.hidden_outputs1)
 
         # Concatenate bias node onto hidden layer outputs.
-        self.hidden_outputs1 = np.concatenate(
-            (self.hidden_outputs1, -np.ones((np.shape(inputs)[0], 1))), axis=1)
+        self.hidden_outputs1 = self._concat_bias(self.hidden_outputs1, dataset_rows)
 
         if self.hidden_weights2 is not None:
             self.hidden_outputs2 = np.dot(self.hidden_outputs1,
                                           self.hidden_weights2)
 
             self.hidden_outputs2 = self._logistic(self.hidden_outputs2)
-
-            self.hidden_outputs2 = np.concatenate(
-                (self.hidden_outputs2, -np.ones((np.shape(inputs)[0], 1))), axis=1)
-
+            self.hidden_outputs2 = self._concat_bias(self.hidden_outputs2, dataset_rows)
             hidden_outputs = self.hidden_outputs2
 
         else:
