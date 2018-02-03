@@ -90,15 +90,15 @@ class MultilayerPerceptron(Learner):
 
         if second_hidden_layer_node_count > 0:
             node_count = second_hidden_layer_node_count
-            self.hidden_weights2 = (np.random.rand(hidden_node_count + 1,
-                                                   node_count) - 0.5) * 2 / np.sqrt(hidden_node_count)
+            self.hidden_weights2 = ((np.random.rand(hidden_node_count + 1, node_count + 1) - 0.5) *
+                                    2 / np.sqrt(hidden_node_count))
 
         else:
             node_count = hidden_node_count
             self.hidden_weights2 = None
 
-        self.output_weights = (np.random.rand(node_count + 1,
-                                              output_node_count) - 0.5) * 2 / np.sqrt(node_count)
+        self.output_weights = ((np.random.rand(node_count + 1, output_node_count) - 0.5) *
+                               2 / np.sqrt(node_count))
 
         return super().__init__(classes=classes, learner_type=learner_type)
 
@@ -178,7 +178,7 @@ class MultilayerPerceptron(Learner):
           A delta value for the current layer's error gradient.
 
         """
-        
+
         return (current_outputs * self.beta * (1.0 - current_outputs) *
                 (np.dot(previous_delta, np.transpose(previous_weights))))
 
@@ -232,8 +232,6 @@ class MultilayerPerceptron(Learner):
         for iteration in range(iterations):
             self.outputs = self.__recall(False, inputs)
             error = 0.5 * np.sum((self.outputs - targets)**2)
-            if (np.mod(iteration, 100) == 0):
-                logger.info("Iteration: ", iteration, " Error: ", error)
 
             # Compute the output layer error gradient for different activation functions.
             if self.learner_type == LearnerType.REGRESSION:
@@ -253,8 +251,9 @@ class MultilayerPerceptron(Learner):
 
             # Compute the hidden layer error gradient for logistic activation function.
             if self.hidden_weights2 is not None:
-                deltah2 = (self.hidden_outputs2 * self.beta * (1.0 - self.hidden_outputs2) *
-                           (np.dot(deltao, np.transpose(self.output_weights))))
+                deltah2 = self._compute_error_gradient(self.hidden_outputs2,
+                                                       self.output_weights,
+                                                       deltao)
 
                 weights = self.hidden_weights2
                 delta = deltah2
@@ -272,11 +271,14 @@ class MultilayerPerceptron(Learner):
             hidden_layer_updates1 = learning_rate * (np.dot(np.transpose(inputs),
                                                             deltah1[:, :-1])) + momentum * hidden_layer_updates1
 
+            hidden_outputs = self.hidden_outputs1
             if self.hidden_weights2 is not None:
-                hidden_layer_updates2 = learning_rate * (np.dot(np.transpose(inputs),
-                                                                deltah2[:, :-1])) + momentum * hidden_layer_updates2
+                hidden_layer_updates2 = learning_rate * (np.dot(np.transpose(self.hidden_outputs1),
+                                                                deltah2)) + momentum * hidden_layer_updates2
 
-            output_layer_updates = learning_rate * (np.dot(np.transpose(self.hidden_outputs1),
+                hidden_outputs = self.hidden_outputs2
+
+            output_layer_updates = learning_rate * (np.dot(np.transpose(hidden_outputs),
                                                            deltao)) + momentum * output_layer_updates
 
             # Apply weight update values to hidden and output layer weights.
@@ -358,7 +360,6 @@ class MultilayerPerceptron(Learner):
                                           self.hidden_weights2)
 
             self.hidden_outputs2 = self._logistic(self.hidden_outputs2)
-            self.hidden_outputs2 = self._concat_bias(self.hidden_outputs2, dataset_rows)
             hidden_outputs = self.hidden_outputs2
 
         else:

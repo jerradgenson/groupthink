@@ -36,6 +36,7 @@ Dr. Stephen Marsland.
 
 import unittest
 import sys
+import logging
 
 import numpy as np
 
@@ -94,11 +95,12 @@ class TestMLP(unittest.TestCase):
             validation_targets = target_data[3::4, :]
 
             neural_net = mlp.MultilayerPerceptron(1, 5, 1,
-                                                  learner_type=mlp.LearnerType.REGRESSION)
+                                                  learner_type=mlp.LearnerType.REGRESSION,
+                                                  second_hidden_layer_node_count=3)
 
             neural_net.train_with_early_stopping(training_inputs, training_targets,
                                                  validation_inputs, validation_targets,
-                                                 0.25)
+                                                 0.25, 800)
 
             testing_outputs = neural_net.recall(testing_inputs)
             errors.append(0.5 * np.sum((testing_targets - testing_outputs)**2))
@@ -107,5 +109,5 @@ class TestMLP(unittest.TestCase):
         self.assertLessEqual(average_error, 0.5)
 
 
-if __name__ == '__main__':
+if __name__ == '__main__':    
     unittest.main()
