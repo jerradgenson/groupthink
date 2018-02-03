@@ -59,11 +59,17 @@ class MultilayerPerceptron(Learner):
       learner_type: Activation function to use at the output nodes. Must be
                    a member of LearnerType. Defaults to CLASSIFICATION.
       bias: Add bias nodes of -1 into the inputs array. Defaults to True.
+      second_hidden_layer_node_count: Number of hidden nodes in the network's
+                                      second hidden layer. Any value less than
+                                      or equal to 0 will construct a network
+                                      without a second hidden layer.
+                                      Defaults to 0.
 
     """
 
     def __init__(self, input_node_count, hidden_node_count, classes=None,
-                 beta=1, learner_type=LearnerType.CLASSIFICATION, bias=True):
+                 beta=1, learner_type=LearnerType.CLASSIFICATION, bias=True,
+                 second_hidden_layer_node_count=0):
 
         self.beta = beta
         self.learner_type = learner_type
@@ -79,11 +85,20 @@ class MultilayerPerceptron(Learner):
                 'learner_type not member of LearnerType')
 
         # Initialise network
-        self.hidden_weights = (np.random.rand(
+        self.hidden_weights1 = (np.random.rand(
             input_node_count + 1, hidden_node_count) - 0.5) * 2 / np.sqrt(input_node_count)
 
-        self.output_weights = (np.random.rand(hidden_node_count + 1,
-                                              output_node_count) - 0.5) * 2 / np.sqrt(hidden_node_count)
+        if second_hidden_layer_node_count > 0:
+            node_count = second_hidden_layer_node_count
+            self.hidden_weights2 = (np.random.rand(hidden_node_count + 1,
+                                                   node_count) - 0.5) * 2 / np.sqrt(hidden_node_count)
+
+        else:
+            node_count = hidden_node_count
+            self.hidden_weights2 = None
+
+        self.output_weights = (np.random.rand(node_count + 1,
+                                              output_node_count) - 0.5) * 2 / np.sqrt(node_count)
 
         return super().__init__(classes=classes, learner_type=learner_type)
 
@@ -145,8 +160,7 @@ class MultilayerPerceptron(Learner):
             oldest_error = previous_error
             previous_error = current_error
             output_value = self.__recall(False, valid)
-            current_error = (
-                0.5 * np.sum((validation_targets - output_value)**2))
+            current_error = (0.5 * np.sum((validation_targets - output_value)**2))
 
         logger.info("Stopped", current_error, previous_error, oldest_error)
         return current_error
@@ -194,8 +208,10 @@ class MultilayerPerceptron(Learner):
         node_order = list(range(training_dataset_count))
 
         # Create arrays to store update values for weight vectors.
-        hidden_layer_updates = np.zeros((np.shape(self.hidden_weights)))
+        hidden_layer_updates1 = np.zeros((np.shape(self.hidden_weights1)))
         output_layer_updates = np.zeros((np.shape(self.output_weights)))
+        if self.hidden_weights2 is not None:
+            hidden_layer_updates2 = np.zeros((np.shape(self.hidden_weights2)))
 
         for iteration in range(iterations):
             self.outputs = self.__recall(False, inputs)
@@ -220,22 +236,41 @@ class MultilayerPerceptron(Learner):
                     'learner_type not member of LearnerType')
 
             # Compute the hidden layer error gradient for logistic activation function.
-            deltah = self.hidden_outputs * self.beta * \
-                (1.0 - self.hidden_outputs) * \
-                (np.dot(deltao, np.transpose(self.output_weights)))
+            if self.hidden_weights2 is not None:
+                deltah2 = self.hidden_outputs2 * self.beta * \
+                    (1.0 - self.hidden_outputs2) * \
+                    (np.dot(deltao, np.transpose(self.output_weights)))
+
+                weights = self.hidden_weights2
+                delta = deltah2
+
+            else:
+                weights = self.output_weights
+                delta = deltao
+
+            deltah1 = self.hidden_outputs1 * self.beta * \
+                (1.0 - self.hidden_outputs1) * \
+                (np.dot(delta, np.transpose(weights)))
 
             # Use error gradients to compute weight update values.
             # We're incorporating the previous weight changes to give them some
             # "momentum." This is done to help prevent the algorithm from
             # becoming stuck in local optima.
-            hidden_layer_updates = learning_rate * (np.dot(np.transpose(inputs),
-                                                           deltah[:, :-1])) + momentum * hidden_layer_updates
+            hidden_layer_updates1 = learning_rate * (np.dot(np.transpose(inputs),
+                                                            deltah1[:, :-1])) + momentum * hidden_layer_updates1
 
-            output_layer_updates = learning_rate * (np.dot(np.transpose(self.hidden_outputs),
+            if self.hidden_weights2 is not None:
+                hidden_layer_updates2 = learning_rate * (np.dot(np.transpose(inputs),
+                                                                deltah2[:, :-1])) + momentum * hidden_layer_updates2
+
+            output_layer_updates = learning_rate * (np.dot(np.transpose(self.hidden_outputs1),
                                                            deltao)) + momentum * output_layer_updates
 
             # Apply weight update values to hidden and output layer weights.
-            self.hidden_weights -= hidden_layer_updates
+            self.hidden_weights1 -= hidden_layer_updates1
+            if self.hidden_weights2 is not None:
+                self.hidden_weights2 -= hidden_layer_updates2
+
             self.output_weights -= output_layer_updates
 
             if randomize:
@@ -245,6 +280,20 @@ class MultilayerPerceptron(Learner):
                 targets = targets[node_order, :]
 
         return error
+
+    def _logistic(self, weights):
+        """
+        Logistic activation function.
+        
+        Args
+          weights: A numpy array of network layer outputs.
+
+        Returns
+          The value of the weights with logistic activation applied.
+
+        """
+
+        return 1.0 / (1.0 + np.exp(-self.beta * weights))
 
     def __recall(self, bias, inputs):
         """
@@ -268,25 +317,38 @@ class MultilayerPerceptron(Learner):
                 (inputs, -np.ones((dataset_count, 1))), axis=1)
 
         # Compute hidden layer outputs from network inputs and hidden layer weights.
-        self.hidden_outputs = np.dot(inputs, self.hidden_weights)
+        self.hidden_outputs1 = np.dot(inputs, self.hidden_weights1)
 
         # Always use logistic activation function for the hidden layer.
-        self.hidden_outputs = (
-            1.0 / (1.0 + np.exp(-self.beta * self.hidden_outputs)))
+        self.hidden_outputs1 = self._logistic(self.hidden_outputs1)
 
         # Concatenate bias node onto hidden layer outputs.
-        self.hidden_outputs = np.concatenate(
-            (self.hidden_outputs, -np.ones((np.shape(inputs)[0], 1))), axis=1)
+        self.hidden_outputs1 = np.concatenate(
+            (self.hidden_outputs1, -np.ones((np.shape(inputs)[0], 1))), axis=1)
+
+        if self.hidden_weights2 is not None:
+            self.hidden_outputs2 = np.dot(self.hidden_outputs1,
+                                          self.hidden_weights2)
+
+            self.hidden_outputs2 = self._logistic(self.hidden_outputs2)
+
+            self.hidden_outputs2 = np.concatenate(
+                (self.hidden_outputs2, -np.ones((np.shape(inputs)[0], 1))), axis=1)
+
+            hidden_outputs = self.hidden_outputs2
+
+        else:
+            hidden_outputs = self.hidden_outputs1
 
         # Compute network outputs from hidden layer outputs and output layer weights.
-        network_outputs = np.dot(self.hidden_outputs, self.output_weights)
+        network_outputs = np.dot(hidden_outputs, self.output_weights)
         if self.learner_type == LearnerType.REGRESSION:
             # Use linear activation (null activation function) for regression.
             return network_outputs
 
         elif self.learner_type == LearnerType.CLASSIFICATION:
             # Use logistic activation function for classification.
-            return 1.0 / (1.0 + np.exp(-self.beta * network_outputs))
+            return self._logistic(network_outputs)
 
         elif self.learner_type == LearnerType.ONE_OF_N:
             # Use soft-max activation function for 1-of-N classification.
