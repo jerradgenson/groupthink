@@ -165,6 +165,23 @@ class MultilayerPerceptron(Learner):
         logger.info("Stopped", current_error, previous_error, oldest_error)
         return current_error
 
+    def _compute_error_gradient(self, current_outputs, previous_weights, previous_delta):
+        """
+        Compute the error gradient for a hidden layer.
+        
+        Args
+          current_outputs: Output values for the current layer.
+          previous_weights: Weights of the previous layer.
+          previous_delta: Delta value for the previous layer's error gradient.
+
+        Returns
+          A delta value for the current layer's error gradient.
+
+        """
+        
+        return (current_outputs * self.beta * (1.0 - current_outputs) *
+                (np.dot(previous_delta, np.transpose(previous_weights))))
+
     def _train(self, inputs, targets, learning_rate, iterations, randomize=False,
                momentum=0.9):
         """
@@ -199,13 +216,12 @@ class MultilayerPerceptron(Learner):
         """
 
         # Add the inputs that match the bias node
-        training_dataset_count = np.shape(inputs)[0]
-        inputs = np.concatenate(
-            (inputs, -np.ones((training_dataset_count, 1))), axis=1)
+        training_dataset_rows = np.shape(inputs)[0]
+        inputs = self._concat_bias(inputs, training_dataset_rows)
 
         # Compute the initial order of input and target nodes so we can
         # randomize them if we so choose.
-        node_order = list(range(training_dataset_count))
+        node_order = list(range(training_dataset_rows))
 
         # Create arrays to store update values for weight vectors.
         hidden_layer_updates1 = np.zeros((np.shape(self.hidden_weights1)))
@@ -221,7 +237,7 @@ class MultilayerPerceptron(Learner):
 
             # Compute the output layer error gradient for different activation functions.
             if self.learner_type == LearnerType.REGRESSION:
-                deltao = (self.outputs - targets) / training_dataset_count
+                deltao = (self.outputs - targets) / training_dataset_rows
 
             elif self.learner_type == LearnerType.CLASSIFICATION:
                 deltao = self.beta * (self.outputs - targets) * \
@@ -229,7 +245,7 @@ class MultilayerPerceptron(Learner):
 
             elif self.learner_type == LearnerType.ONE_OF_N:
                 deltao = (self.outputs - targets) * (self.outputs *
-                                                     (-self.outputs) + self.outputs) / training_dataset_count
+                                                     (-self.outputs) + self.outputs) / training_dataset_rows
 
             else:
                 raise InvalidLearnerTypeError(
@@ -237,9 +253,8 @@ class MultilayerPerceptron(Learner):
 
             # Compute the hidden layer error gradient for logistic activation function.
             if self.hidden_weights2 is not None:
-                deltah2 = self.hidden_outputs2 * self.beta * \
-                    (1.0 - self.hidden_outputs2) * \
-                    (np.dot(deltao, np.transpose(self.output_weights)))
+                deltah2 = (self.hidden_outputs2 * self.beta * (1.0 - self.hidden_outputs2) *
+                           (np.dot(deltao, np.transpose(self.output_weights))))
 
                 weights = self.hidden_weights2
                 delta = deltah2
@@ -248,9 +263,7 @@ class MultilayerPerceptron(Learner):
                 weights = self.output_weights
                 delta = deltao
 
-            deltah1 = self.hidden_outputs1 * self.beta * \
-                (1.0 - self.hidden_outputs1) * \
-                (np.dot(delta, np.transpose(weights)))
+            deltah1 = self._compute_error_gradient(self.hidden_outputs1, weights, delta)
 
             # Use error gradients to compute weight update values.
             # We're incorporating the previous weight changes to give them some
@@ -328,7 +341,7 @@ class MultilayerPerceptron(Learner):
 
         dataset_rows = np.shape(inputs)[0]
         if bias:
-            # Add the inputs that match the bias node.           
+            # Add the inputs that match the bias node.
             inputs = self._concat_bias(inputs, dataset_rows)
 
         # Compute hidden layer outputs from network inputs and hidden layer weights.
