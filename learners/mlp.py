@@ -357,47 +357,46 @@ class MultilayerPerceptron(Learner):
 
         """
 
-        activations = [inputs]
         dataset_rows = np.shape(inputs)[0]
         if bias:
             # Add the inputs that match the bias node.
             inputs = self._concat_bias(inputs, dataset_rows)
 
-        # Compute hidden layer outputs from network inputs and hidden layer weights.
-        activations.append(np.dot(inputs, self.layers[0]))
+        self.activations = [inputs]
 
-        # Always use logistic activation function for the hidden layer.
-        activations[1] = self._logistic(activations[1])
+        # Compute activations for each network layer.
+        for layer_index, layer in enumerate(self.layers):
+            layer_activations = np.dot(self.activations[-1], layer)
+            if layer_index != len(self.layers) - 1:
+                # Do not apply logistic activation to output layer.
+                layer_activations = self._logistic(layer_activations)
 
-        # Concatenate bias node onto hidden layer outputs.
-        activations[1] = self._concat_bias(activations[1], dataset_rows)
-        if len(self.layers) == 3:
-            activations.append(np.dot(activations[1], self.layers[1]))
-            activations[2] = self._logistic(activations[2])
+            if layer_index == 0 and self.bias:
+                # Concatendate bias node to first hidden layer.
+                layer_activations = self._concat_bias(layer_activations, dataset_rows)
 
-        # Compute network outputs from hidden layer outputs and output layer weights.
-        activations.append(np.dot(activations[-1], self.layers[-1]))
+            self.activations.append(layer_activations)
+
         if self.learner_type == LearnerType.REGRESSION:
             # Use linear activation (null activation function) for regression.
             pass
 
         elif self.learner_type == LearnerType.CLASSIFICATION:
             # Use logistic activation function for classification.
-            activations[-1] = self._logistic(activations[-1])
+            self.activations[-1] = self._logistic(self.activations[-1])
 
         elif self.learner_type == LearnerType.ONE_OF_N:
             # Use soft-max activation function for 1-of-N classification.
-            normalisers = np.sum(np.exp(activations[-1]), axis=1) * \
-                np.ones((1, np.shape(activations[-1])[0]))
+            normalisers = np.sum(np.exp(self.activations[-1]), axis=1) * \
+                np.ones((1, np.shape(self.activations[-1])[0]))
 
-            activations[-1] = np.transpose(np.transpose(np.exp(activations[-1])) / normalisers)
+            self.activations[-1] = np.transpose(np.transpose(np.exp(self.activations[-1])) / normalisers)
 
         else:
             raise InvalidLearnerTypeError(
                 'learner_type not member of LearnerType')
 
-        self.activations = activations
-        return activations[-1]
+        return self.activations[-1]
 
     def _recall(self, inputs):
         return self.__recall(self.bias, inputs)
