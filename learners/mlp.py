@@ -170,13 +170,13 @@ class MultilayerPerceptron(Learner):
         logger.info("Stopped", current_error, previous_error, oldest_error)
         return current_error
 
-    def _compute_error_gradient(self, current_outputs, previous_weights, previous_delta):
+    def _error_gradient(self, activations, previous_layer, previous_delta):
         """
         Compute the error gradient for a hidden layer.
 
         Args
-          current_outputs: Output values for the current layer.
-          previous_weights: Weights of the previous layer.
+          activations: Output values for the current layer.
+          previous_layer: Weights of the previous layer.
           previous_delta: Delta value for the previous layer's error gradient.
 
         Returns
@@ -184,8 +184,8 @@ class MultilayerPerceptron(Learner):
 
         """
 
-        return (current_outputs * self.beta * (1.0 - current_outputs) *
-                (np.dot(previous_delta, np.transpose(previous_weights))))
+        return (activations * self.beta * (1.0 - activations) *
+                (np.dot(previous_delta, np.transpose(previous_layer))))
 
     def _backpropagate(self, learning_rate, momentum, activations,
                        layers, layers_updates, previous_delta):
@@ -194,13 +194,13 @@ class MultilayerPerceptron(Learner):
         layer_inputs = activations[-2]
         layer_weights = layers[-2]
         previous_weights = layers[-1]
-        layer_delta = self._compute_error_gradient(layer_activations,
-                                                   previous_weights,
-                                                   previous_delta)
+        layer_delta = self._error_gradient(layer_activations,
+                                           previous_weights,
+                                           previous_delta)
 
         if len(layers) == 2 and self.bias:
             layer_delta = layer_delta[:, :-1]
-            
+
         updates = (learning_rate *
                    np.dot(np.transpose(layer_inputs), layer_delta) +
                    momentum * layers_updates[-1])
