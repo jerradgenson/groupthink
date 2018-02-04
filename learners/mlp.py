@@ -168,7 +168,7 @@ class MultilayerPerceptron(Learner):
     def _compute_error_gradient(self, current_outputs, previous_weights, previous_delta):
         """
         Compute the error gradient for a hidden layer.
-        
+
         Args
           current_outputs: Output values for the current layer.
           previous_weights: Weights of the previous layer.
@@ -181,6 +181,37 @@ class MultilayerPerceptron(Learner):
 
         return (current_outputs * self.beta * (1.0 - current_outputs) *
                 (np.dot(previous_delta, np.transpose(previous_weights))))
+
+    def _backpropagate(self, learning_rate, momentum, activations,
+                       network_layers, layers_updates, previous_delta):
+
+        layer_activations = activations[-1]
+        layer_inputs = activations[-2]
+        layer_weights = network_layers[-1]
+        layer_delta = self._compute_error_gradient(layer_activations,
+                                                   layer_weights,
+                                                   previous_delta)
+
+        if len(network_layers) == 1 and self.bias:
+            layer_delta = layer_delta[:, :-1]
+
+        layer_updates = (learning_rate *
+                         (np.dot(np.transpose(layer_inputs), layer_delta)) +
+                         momentum * layers_updates[-1])
+
+        layer_weights -= layer_updates
+        if len(network_layers) == 1:
+            return [layer_weights], [layer_updates]
+
+        else:
+            next_weights, next_updates = self._backpropagate(learning_rate,
+                                                             momentum,
+                                                             activations[:-1],
+                                                             network_layers[:-1],
+                                                             layers_updates[:-1],
+                                                             layer_delta)
+
+            return next_weights + [layer_weights], next_updates + [layer_updates]
 
     def _train(self, inputs, targets, learning_rate, iterations, randomize=False,
                momentum=0.9):
