@@ -192,31 +192,34 @@ class MultilayerPerceptron(Learner):
 
         layer_activations = activations[-1]
         layer_inputs = activations[-2]
-        layer_weights = layers[-1]
+        layer_weights = layers[-2]
+        previous_weights = layers[-1]
         layer_delta = self._compute_error_gradient(layer_activations,
-                                                   layer_weights,
+                                                   previous_weights,
                                                    previous_delta)
 
-        if len(layers) == 1 and self.bias:
+        if len(layers) == 2 and self.bias:
             layer_delta = layer_delta[:, :-1]
-
+            
         updates = (learning_rate *
-                   (np.dot(np.transpose(layer_inputs), layer_delta)) +
+                   np.dot(np.transpose(layer_inputs), layer_delta) +
                    momentum * layers_updates[-1])
 
         layer_weights -= updates
-        if len(layers) == 1:
+        if len(layers) == 2:
+            # Basis step
             return [layer_weights], [updates]
 
         else:
-            next_weights, next_updates = self._backpropagate(learning_rate,
-                                                             momentum,
-                                                             activations[:-1],
-                                                             layers[:-1],
-                                                             layers_updates[:-1],
-                                                             layer_delta)
+            # Inductive step
+            next_layer, next_updates = self._backpropagate(learning_rate,
+                                                           momentum,
+                                                           activations[:-1],
+                                                           layers[:-1],
+                                                           layers_updates[:-1],
+                                                           layer_delta)
 
-            return next_weights + [layer_weights], next_updates + [updates]
+            return next_layer + [layer_weights], next_updates + [updates]
 
     def _train(self, inputs, targets, learning_rate, iterations, randomize=False,
                momentum=0.9):
@@ -264,7 +267,7 @@ class MultilayerPerceptron(Learner):
         layers_updates.append(np.zeros((np.shape(self.layers[0]))))
         if len(self.layers) == 3:
             layers_updates.append(np.zeros((np.shape(self.layers[1]))))
-        
+
         layers_updates.append(np.zeros((np.shape(self.layers[-1]))))
         for iteration in range(iterations):
             outputs = self.__recall(False, inputs)
@@ -287,46 +290,20 @@ class MultilayerPerceptron(Learner):
                 raise InvalidLearnerTypeError(
                     'learner_type not member of LearnerType')
 
-            # Compute the hidden layer error gradient for logistic activation function.
-            if len(self.layers) == 3:
-                deltah2 = self._compute_error_gradient(self.activations[2],
-                                                       self.layers[-1],
-                                                       deltao)
+            output_updates = (learning_rate *
+                              np.dot(np.transpose(self.activations[-2]), deltao) +
+                              momentum * layers_updates[-1])
 
-                delta = deltah2
+            new_output_layer = self.layers[-1] - output_updates
+            new_layers, new_updates = self._backpropagate(learning_rate,
+                                                          momentum,
+                                                          self.activations[:-1],
+                                                          self.layers,
+                                                          layers_updates[:-1],
+                                                          deltao)
 
-            else:
-                delta = deltao
-
-            deltah1 = self._compute_error_gradient(self.activations[1], self.layers[1], delta)
-
-            # Use error gradients to compute weight update values.
-            # We're incorporating the previous weight changes to give them some
-            # "momentum." This is done to help prevent the algorithm from
-            # becoming stuck in local optima.
-            layers_updates[0] = (learning_rate *
-                                 (np.dot(np.transpose(inputs), deltah1[:, :-1])) +
-                                 momentum *
-                                 layers_updates[0])
-
-            if len(self.layers) == 3:
-                layers_updates[1] = (learning_rate *
-                                     (np.dot(np.transpose(self.activations[1]), deltah2)) +
-                                     momentum *
-                                     layers_updates[1])
-
-            layers_updates[-1] = (learning_rate *
-                                  (np.dot(np.transpose(self.activations[-2]), deltao)) +
-                                  momentum *
-                                  layers_updates[-1])
-
-            # Apply weight update values to hidden and output layer weights.
-            self.layers[0] -= layers_updates[0]
-            if len(self.layers) == 3:
-                self.layers[1] -= layers_updates[1]
-
-            self.layers[-1] -= layers_updates[-1]
-
+            self.layers = new_layers + [new_output_layer]
+            layers_updates = new_updates + [output_updates]
             if randomize:
                 # Randomize order of input vector and update target vector correspondingly.
                 np.random.shuffle(node_order)
