@@ -260,11 +260,12 @@ class MultilayerPerceptron(Learner):
         node_order = list(range(training_dataset_rows))
 
         # Create arrays to store update values for weight vectors.
-        hidden_layer_updates1 = np.zeros((np.shape(self.layers[0])))
-        output_layer_updates = np.zeros((np.shape(self.layers[-1])))
+        layers_updates = []
+        layers_updates.append(np.zeros((np.shape(self.layers[0]))))
         if len(self.layers) == 3:
-            hidden_layer_updates2 = np.zeros((np.shape(self.layers[1])))
-
+            layers_updates.append(np.zeros((np.shape(self.layers[1]))))
+        
+        layers_updates.append(np.zeros((np.shape(self.layers[-1]))))
         for iteration in range(iterations):
             outputs = self.__recall(False, inputs)
             error = 0.5 * np.sum((outputs - targets)**2)
@@ -303,28 +304,28 @@ class MultilayerPerceptron(Learner):
             # We're incorporating the previous weight changes to give them some
             # "momentum." This is done to help prevent the algorithm from
             # becoming stuck in local optima.
-            hidden_layer_updates1 = (learning_rate *
-                                     (np.dot(np.transpose(inputs), deltah1[:, :-1])) +
-                                     momentum *
-                                     hidden_layer_updates1)
+            layers_updates[0] = (learning_rate *
+                                 (np.dot(np.transpose(inputs), deltah1[:, :-1])) +
+                                 momentum *
+                                 layers_updates[0])
 
             if len(self.layers) == 3:
-                hidden_layer_updates2 = (learning_rate *
-                                         (np.dot(np.transpose(self.activations[1]), deltah2)) +
-                                         momentum *
-                                         hidden_layer_updates2)
+                layers_updates[1] = (learning_rate *
+                                     (np.dot(np.transpose(self.activations[1]), deltah2)) +
+                                     momentum *
+                                     layers_updates[1])
 
-            output_layer_updates = (learning_rate *
-                                    (np.dot(np.transpose(self.activations[-2]), deltao)) +
-                                    momentum *
-                                    output_layer_updates)
+            layers_updates[-1] = (learning_rate *
+                                  (np.dot(np.transpose(self.activations[-2]), deltao)) +
+                                  momentum *
+                                  layers_updates[-1])
 
             # Apply weight update values to hidden and output layer weights.
-            self.layers[0] -= hidden_layer_updates1
+            self.layers[0] -= layers_updates[0]
             if len(self.layers) == 3:
-                self.layers[1] -= hidden_layer_updates2
+                self.layers[1] -= layers_updates[1]
 
-            self.layers[-1] -= output_layer_updates
+            self.layers[-1] -= layers_updates[-1]
 
             if randomize:
                 # Randomize order of input vector and update target vector correspondingly.
