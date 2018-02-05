@@ -84,7 +84,7 @@ class MultilayerPerceptron(Learner):
             previous_count = shape[layer_index]
             if 0 < layer_index < len(shape) - 2 and bias:
                 node_count += 1
-                
+
             weights = ((np.random.rand(previous_count + 1, node_count) - 0.5) *
                        2 / np.sqrt(previous_count))
 
@@ -248,12 +248,7 @@ class MultilayerPerceptron(Learner):
         node_order = list(range(training_dataset_rows))
 
         # Create arrays to store update values for weight vectors.
-        layers_updates = []
-        layers_updates.append(np.zeros((np.shape(self.layers[0]))))
-        if len(self.layers) == 3:
-            layers_updates.append(np.zeros((np.shape(self.layers[1]))))
-
-        layers_updates.append(np.zeros((np.shape(self.layers[-1]))))
+        layers_updates = [np.zeros(layer.shape) for layer in self.layers]
         for iteration in range(iterations):
             outputs = self.__recall(False, inputs)
             error = 0.5 * np.sum((outputs - targets)**2)
