@@ -67,44 +67,29 @@ class MultilayerPerceptron(Learner):
 
     """
 
-    def __init__(self, input_node_count, hidden_node_count, classes=None,
-                 beta=1, learner_type=LearnerType.CLASSIFICATION, bias=True,
-                 second_hidden_layer_node_count=0):
+    def __init__(self, shape, classes=None, beta=1,
+                 learner_type=LearnerType.CLASSIFICATION, bias=True):
 
         self.beta = beta
         self.learner_type = learner_type
         self.bias = bias
-        if learner_type in (LearnerType.CLASSIFICATION, LearnerType.REGRESSION):
-            output_node_count = 1
-
-        elif learner_type == LearnerType.ONE_OF_N:
-            output_node_count = len(classes)
-
-        else:
-            raise InvalidLearnerTypeError(
-                'learner_type not member of LearnerType')
+        self.shape = shape
+        self.activations = []
+        if learner_type not in (LearnerType.CLASSIFICATION, LearnerType.REGRESSION, LearnerType.ONE_OF_N):
+            raise InvalidLearnerTypeError('learner_type not member of LearnerType')
 
         # Initialise network
         self.layers = []
-        hidden_weights1 = (np.random.rand(
-            input_node_count + 1, hidden_node_count) - 0.5) * 2 / np.sqrt(input_node_count)
+        for layer_index, node_count in enumerate(shape[1:]):
+            previous_count = shape[layer_index]
+            if 0 < layer_index < len(shape) - 2 and bias:
+                node_count += 1
+                
+            weights = ((np.random.rand(previous_count + 1, node_count) - 0.5) *
+                       2 / np.sqrt(previous_count))
 
-        self.layers.append(hidden_weights1)
-        if second_hidden_layer_node_count > 0:
-            node_count = second_hidden_layer_node_count
-            hidden_weights2 = ((np.random.rand(hidden_node_count + 1, node_count + 1) - 0.5) *
-                               2 / np.sqrt(hidden_node_count))
+            self.layers.append(weights)
 
-            self.layers.append(hidden_weights2)
-
-        else:
-            node_count = hidden_node_count
-
-        output_weights = ((np.random.rand(node_count + 1, output_node_count) - 0.5) *
-                          2 / np.sqrt(node_count))
-
-        self.layers.append(output_weights)
-        self.activations = []
         return super().__init__(classes=classes, learner_type=learner_type)
 
     def train_with_early_stopping(self, training_inputs, training_targets,
