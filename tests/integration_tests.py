@@ -36,7 +36,6 @@ Dr. Stephen Marsland.
 
 import unittest
 import sys
-import logging
 
 import numpy as np
 
@@ -49,7 +48,7 @@ class TestMLP(unittest.TestCase):
 
     def test_logical_and(self):
         and_data = np.array([[0, 0, 0], [0, 1, 0], [1, 0, 0], [1, 1, 1]])
-        neural_net = mlp.MultilayerPerceptron(2, 2, (False, True))
+        neural_net = mlp.MultilayerPerceptron((2, 2, 1), (False, True))
         neural_net.train(and_data[:, 0:2], and_data[:, 2:], 0.25, 1001)
         confusion_matrix = neural_net.generate_confusion_matrix(
             and_data[:, 0:2], and_data[:, 2:3])
@@ -62,11 +61,11 @@ class TestMLP(unittest.TestCase):
 
     def test_logical_xor(self):
         xor_data = np.array([[0, 0, 0], [0, 1, 1], [1, 0, 1], [1, 1, 0]])
-        neural_net = mlp.MultilayerPerceptron(2, 2, (False, True))
+        neural_net = mlp.MultilayerPerceptron((2, 2, 1), (False, True))
 
         neural_net.train(xor_data[:, 0:2], xor_data[:, 2:], 0.25, 5001)
-        confusion_matrix = neural_net.generate_confusion_matrix(
-            xor_data[:, 0:2], xor_data[:, 2:3])
+        confusion_matrix = neural_net.generate_confusion_matrix(xor_data[:, 0:2],
+                                                                xor_data[:, 2:3])
 
         expected = np.array([[2., 0.], [0., 2.]])
         self.assertTrue((confusion_matrix == expected).all())
@@ -94,9 +93,8 @@ class TestMLP(unittest.TestCase):
             testing_targets = target_data[1::4, :]
             validation_targets = target_data[3::4, :]
 
-            neural_net = mlp.MultilayerPerceptron(1, 5, 1,
-                                                  learner_type=mlp.LearnerType.REGRESSION,
-                                                  second_hidden_layer_node_count=3)
+            neural_net = mlp.MultilayerPerceptron((1, 5, 4, 3, 1),
+                                                  learner_type=mlp.LearnerType.REGRESSION)
 
             neural_net.train_with_early_stopping(training_inputs, training_targets,
                                                  validation_inputs, validation_targets,
