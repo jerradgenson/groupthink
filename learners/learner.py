@@ -29,12 +29,10 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-Inspired by code in "Machine Learning: An Algorithmic Perspective" by
-Dr. Stephen Marsland.
-
 """
 
 from enum import Enum
+from functools import partial
 from abc import ABC, abstractmethod
 
 import numpy as np
@@ -50,13 +48,19 @@ class Learner(ABC):
     Child classes must call superclass constructor.
 
     Args
+      trainer: An instance of trainers.Trainer. Specifies the algorithm used to
+               train the Learner.
       classes: A sequence of classification names. This must be defined for
                ONE_OF_N learners. Defaults to None.
+      learner_type: One of the values enumerated by LearnerType. Indicates
+                    whether to construct a classification, regression, or
+                    one_of_n learner. Defaults to classification.
 
     """
 
-    def __init__(self, classes=None, learner_type=LearnerType.CLASSIFICATION):
-        self.train = self._train
+    def __init__(self, trainer, classes=None, learner_type=LearnerType.CLASSIFICATION):
+        self.trainer = trainer
+        self.train = partial(trainer.train, self)
         self.classes_of_outputs = None
         if learner_type == LearnerType.ONE_OF_N and classes:
             def classes_of_outputs(self, outputs):
@@ -96,23 +100,6 @@ class Learner(ABC):
                 return output_classes
 
             self.classes_of_outputs = classes_of_outputs
-
-    @abstractmethod
-    def _train(self, inputs, targets):
-        """
-        Train the Learner on the given inputs and targets data.
-
-        Args
-          inputs: Training inputs to the Learner as a numpy array of arrays,
-                  where each inner array is one set of inputs.
-          targets: Target outputs for the Learner as a numpy array of arrays,
-                   where each inner array is one set of target outputs. Target
-                   arrays must match the order of input arrays.
-
-        Returns
-          Sum of squares error of the last network recall on the input data.
-
-        """
 
     @abstractmethod
     def _recall(self, inputs):

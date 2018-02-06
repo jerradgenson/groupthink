@@ -92,7 +92,11 @@ class MultilayerPerceptron(Learner):
 
             self.layers.append(weights)
 
-        return super().__init__(classes=classes, learner_type=learner_type)
+        class Trainer:
+            pass
+
+        Trainer.train = self.__train
+        return super().__init__(Trainer, classes=classes, learner_type=learner_type)
 
     def train_with_early_stopping(self, training_inputs, training_targets,
                                   validation_inputs, validation_targets,
@@ -145,8 +149,8 @@ class MultilayerPerceptron(Learner):
 
             current_epoch += 1
             logger.info(current_epoch)
-            self._train(training_inputs, training_targets,
-                        learning_rate, iterations, momentum)
+            self.train(training_inputs, training_targets,
+                       learning_rate, iterations, momentum)
             oldest_error = previous_error
             previous_error = current_error
             output_value = self.__recall(False, valid)
@@ -206,8 +210,9 @@ class MultilayerPerceptron(Learner):
 
             return next_layer + [layer_weights], next_updates + [updates]
 
-    def _train(self, inputs, targets, learning_rate, iterations, randomize=False,
-               momentum=0.9):
+    @staticmethod
+    def __train(self, inputs, targets, learning_rate, iterations, randomize=False,
+                momentum=0.9):
         """
         Train the neural network using backpropagation.
         Training happens en batch, which means all the training data is fed to
