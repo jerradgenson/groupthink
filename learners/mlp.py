@@ -128,11 +128,7 @@ class MultilayerPerceptron(Learner):
 
         """
 
-        valid = validation_inputs
-        if self.bias:
-            valid = np.concatenate((validation_inputs,
-                                    -np.ones((np.shape(valid)[0], 1))), axis=1)
-
+        valid = self._concat_bias(validation_inputs) if self.bias else validation_inputs
         oldest_error = 0
         previous_error = 0
         current_error = 0
@@ -245,7 +241,7 @@ class MultilayerPerceptron(Learner):
         # Add the inputs that match the bias node
         training_dataset_rows = np.shape(inputs)[0]
         if self.bias:
-            inputs = self._concat_bias(inputs, training_dataset_rows)
+            inputs = self._concat_bias(inputs)
 
         # Compute the initial order of input and target nodes so we can
         # randomize them if we so choose.
@@ -310,20 +306,19 @@ class MultilayerPerceptron(Learner):
 
         return 1.0 / (1.0 + np.exp(-self.beta * layer_values))
 
-    def _concat_bias(self, layer_values, rows):
+    def _concat_bias(self, layer_values):
         """
         Concatenate bias node to network layer values.
 
         Args
           layer_values: A numpy array of network layer input or output values.
-          rows: The number of rows in layer_values. If there is only one set of
-                values in the array, this will be 1.
 
         Returns
           layer_values with a bias node contatenated onto the end.
 
         """
 
+        rows = layer_values.shape[0]
         return np.concatenate((layer_values, -np.ones((rows, 1))), axis=1)
 
     def __recall(self, bias, inputs):
@@ -341,10 +336,9 @@ class MultilayerPerceptron(Learner):
 
         """
 
-        dataset_rows = np.shape(inputs)[0]
         if bias:
             # Add the inputs that match the bias node.
-            inputs = self._concat_bias(inputs, dataset_rows)
+            inputs = self._concat_bias(inputs)
 
         self.activations = [inputs]
 
@@ -357,7 +351,7 @@ class MultilayerPerceptron(Learner):
 
             if layer_index == 0 and self.bias:
                 # Concatendate bias node to first hidden layer.
-                layer_activations = self._concat_bias(layer_activations, dataset_rows)
+                layer_activations = self._concat_bias(layer_activations)
 
             self.activations.append(layer_activations)
 
