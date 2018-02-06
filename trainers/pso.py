@@ -95,14 +95,14 @@ class ParticleSwarmOptimization(Trainer):
                 # Calculate best personal and global fitness for each particle.
                 learner.update(particle.value)
                 particle.fitness = self.calculate_error(learner, inputs, targets)
-                if not hasattr(particle, 'pbest') or particle.fitness > particle.pbest.fitness:
+                if not hasattr(particle, 'pbest') or particle.fitness < particle.pbest.fitness:
                     # Particle doesn't have a personal best fitness value yet or
-                    # its current fitness exceeds pbest.
+                    # its current fitness beats pbest.
                     particle.pbest = particle
 
-                if not self.gbest or particle.fitness > self.gbest.fitness:
+                if not self.gbest or particle.fitness < self.gbest.fitness:
                     # Global best fitness value doesn't exist yet or particle's
-                    # current fitness exceeds gbest.
+                    # current fitness beats gbest.
                     self.gbest = particle
 
         learner.update(self.gbest)
