@@ -41,6 +41,7 @@ import numpy as np
 
 sys.path.append('..')
 from learners import mlp
+from trainers.bp import Backpropagation
 from preprocessing import normalize
 
 
@@ -50,8 +51,8 @@ class TestMLP(unittest.TestCase):
 
     def test_logical_and(self):
         and_data = self.AND_DATA
-        neural_net = mlp.MultilayerPerceptron((2, 2, 1), (False, True))
-        neural_net.train(and_data[:, 0:2], and_data[:, 2:], 0.25, 1001)
+        neural_net = mlp.MultilayerPerceptron((2, 2, 1), classes=(False, True))
+        neural_net.train(and_data[:, 0:2], and_data[:, 2:])
         confusion_matrix = neural_net.generate_confusion_matrix(
             and_data[:, 0:2], and_data[:, 2:3])
 
@@ -63,18 +64,21 @@ class TestMLP(unittest.TestCase):
 
     def test_false_bias(self):
         and_data = self.AND_DATA
-        neural_net = mlp.MultilayerPerceptron((2, 2, 1), (False, True), bias=False)
+        neural_net = mlp.MultilayerPerceptron((2, 2, 1), classes=(False, True),
+                                              bias=0)
+
         training_inputs = and_data[:, 0:2]
         training_targets = and_data[:, 2:]
         neural_net.train_with_early_stopping(training_inputs, training_targets,
-                                             training_inputs, training_targets,
-                                             0.25, 1001)
+                                             training_inputs, training_targets)
 
     def test_logical_xor(self):
         xor_data = self.XOR_DATA
-        neural_net = mlp.MultilayerPerceptron((2, 2, 1), (False, True))
+        neural_net = mlp.MultilayerPerceptron((2, 2, 1),
+                                              Backpropagation(5000),
+                                              classes=(False, True))
 
-        neural_net.train(xor_data[:, 0:2], xor_data[:, 2:], 0.25, 5001)
+        neural_net.train(xor_data[:, 0:2], xor_data[:, 2:])
         confusion_matrix = neural_net.generate_confusion_matrix(xor_data[:, 0:2],
                                                                 xor_data[:, 2:3])
 
@@ -105,11 +109,11 @@ class TestMLP(unittest.TestCase):
             validation_targets = target_data[3::4, :]
 
             neural_net = mlp.MultilayerPerceptron((1, 5, 4, 3, 1),
+                                                  Backpropagation(800),
                                                   learner_type=mlp.LearnerType.REGRESSION)
 
             neural_net.train_with_early_stopping(training_inputs, training_targets,
-                                                 validation_inputs, validation_targets,
-                                                 0.25, 800)
+                                                 validation_inputs, validation_targets)
 
             testing_outputs = neural_net.recall(testing_inputs)
             errors.append(0.5 * np.sum((testing_targets - testing_outputs)**2))

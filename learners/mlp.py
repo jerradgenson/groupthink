@@ -39,6 +39,7 @@ import logging
 import numpy as np
 
 from .learner import LearnerType, Learner, InvalidLearnerTypeError
+from trainers.bp import Backpropagation
 
 logger = logging.getLogger(__name__)
 
@@ -68,8 +69,8 @@ class MultilayerPerceptron(Learner):
 
     """
 
-    def __init__(self, shape, classes=None, beta=1,
-                 learner_type=LearnerType.CLASSIFICATION, bias=-1):
+    def __init__(self, shape, trainer=Backpropagation(), classes=None,
+                 beta=1, learner_type=LearnerType.CLASSIFICATION, bias=-1):
 
         self.beta = beta
         self.learner_type = learner_type
@@ -92,16 +93,11 @@ class MultilayerPerceptron(Learner):
 
             self.layers.append(weights)
 
-        class Trainer:
-            pass
-
-        Trainer.train = self.__train
-        return super().__init__(Trainer, classes=classes, learner_type=learner_type)
+        return super().__init__(trainer, classes=classes, learner_type=learner_type)
 
     def train_with_early_stopping(self, training_inputs, training_targets,
                                   validation_inputs, validation_targets,
-                                  learning_rate, iterations=100, max_epoch=-1,
-                                  momentum=0.9):
+                                  max_epoch=-1):
         """
         Train the neural network using backpropagation and early stopping.
         Stop training when the validation set error consistently increases.
@@ -117,16 +113,8 @@ class MultilayerPerceptron(Learner):
                              when the early stopping condition has been met.
           validation_targets: Similar to trainings_targets, but used to determine
                               when the early stopping condition has been met.
-          learning_rate: A float between 0 and 1 that determines the magnitude
-                         of updates to the network's weights. A high learning
-                         rate will cause the network to converge faster, but
-                         might negatively impact the precision/solution quality.
-          iterations: Number of iterations to run the training algorithm per epoch.
-                      Defaults to 100.
           max_epoch: Maximum number of "runs" of the training algorithm. A value
                      <= 0 indicates no limit. Defaults to -1.
-          momentum: The amount of "momentum" to conserve during training as a float
-                    between 0 and 1. Defaults to 0.9.
 
         Returns
           Sum of squares error of the last network recall on the validation data.
@@ -149,153 +137,14 @@ class MultilayerPerceptron(Learner):
 
             current_epoch += 1
             logger.info(current_epoch)
-            self.train(training_inputs, training_targets,
-                       learning_rate, iterations, momentum)
+            self.train(training_inputs, training_targets)
             oldest_error = previous_error
             previous_error = current_error
-            output_value = self.__recall(False, valid)
+            output_value = self._recall(valid, False)
             current_error = (0.5 * np.sum((validation_targets - output_value)**2))
 
         logger.info("Stopped", current_error, previous_error, oldest_error)
         return current_error
-
-    def _error_gradient(self, activations, previous_layer, previous_delta):
-        """
-        Compute the error gradient for a hidden layer.
-
-        Args
-          activations: Output values for the current layer.
-          previous_layer: Weights of the previous layer.
-          previous_delta: Delta value for the previous layer's error gradient.
-
-        Returns
-          A delta value for the current layer's error gradient.
-
-        """
-
-        return (activations * self.beta * (1.0 - activations) *
-                (np.dot(previous_delta, np.transpose(previous_layer))))
-
-    def _backpropagate(self, learning_rate, momentum, activations,
-                       layers, layers_updates, previous_delta):
-
-        layer_activations = activations[-1]
-        layer_inputs = activations[-2]
-        layer_weights = layers[-2]
-        previous_weights = layers[-1]
-        layer_delta = self._error_gradient(layer_activations,
-                                           previous_weights,
-                                           previous_delta)
-
-        if len(layers) == 2 and self.bias:
-            layer_delta = layer_delta[:, :-1]
-
-        updates = (learning_rate *
-                   np.dot(np.transpose(layer_inputs), layer_delta) +
-                   momentum * layers_updates[-1])
-
-        layer_weights -= updates
-        if len(layers) == 2:
-            # Basis step
-            return [layer_weights], [updates]
-
-        else:
-            # Inductive step
-            next_layer, next_updates = self._backpropagate(learning_rate,
-                                                           momentum,
-                                                           activations[:-1],
-                                                           layers[:-1],
-                                                           layers_updates[:-1],
-                                                           layer_delta)
-
-            return next_layer + [layer_weights], next_updates + [updates]
-
-    @staticmethod
-    def __train(self, inputs, targets, learning_rate, iterations, randomize=False,
-                momentum=0.9):
-        """
-        Train the neural network using backpropagation.
-        Training happens en batch, which means all the training data is fed to
-        the algorithm at once. Mutates self.hidden_weights and
-        self.output_weights.
-
-        Args
-          inputs: Training inputs to the network as a numpy array of arrays,
-                  where each inner array is one set of inputs.
-          targets: Target outputs for the network as a numpy array of arrays,
-                   where each inner array is one set of target outputs. Target
-                   arrays must match the order of input arrays.
-          learning_rate: A float between 0 and 1 that determines the magnitude
-                         of updates to the network's weights. A high learning
-                         rate will cause the network to converge faster, but
-                         might negatively impact the precision/solution quality.
-          iterations: Number of iterations to run the training algorithm.
-                      If this is set too low, the algorithm might not converge
-                      on a solution. If set too high, it might take too long to
-                      run and/or overfit the data.
-          randomize: A flag that indicates whether or not to randomize inputs
-                     and targets. This can improve the speed at which the
-                     training algorithm converges. Default value is False.
-          momentum: The amount of "momentum" to conserve during training as a float
-                    between 0 and 1. Defaults to 0.9.
-
-        Returns
-          Sum of squares error of the last network recall on the input data.
-
-        """
-
-        # Add the inputs that match the bias node
-        training_dataset_rows = np.shape(inputs)[0]
-        inputs = self._concat_bias(inputs)
-
-        # Compute the initial order of input and target nodes so we can
-        # randomize them if we so choose.
-        node_order = list(range(training_dataset_rows))
-
-        # Create arrays to store update values for weight vectors.
-        layers_updates = [np.zeros(layer.shape) for layer in self.layers]
-        for iteration in range(iterations):
-            outputs = self.__recall(False, inputs)
-            error = 0.5 * np.sum((outputs - targets)**2)
-
-            # Compute the output layer error gradient for different activation functions.
-            if self.learner_type == LearnerType.REGRESSION:
-                deltao = (outputs - targets) / training_dataset_rows
-
-            elif self.learner_type == LearnerType.CLASSIFICATION:
-                deltao = self.beta * (outputs - targets) * \
-                    outputs * (1.0 - outputs)
-
-            elif self.learner_type == LearnerType.ONE_OF_N:
-                deltao = ((outputs - targets) *
-                          (outputs * -outputs + outputs) /
-                          training_dataset_rows)
-
-            else:
-                raise InvalidLearnerTypeError(
-                    'learner_type not member of LearnerType')
-
-            output_updates = (learning_rate *
-                              np.dot(np.transpose(self.activations[-2]), deltao) +
-                              momentum * layers_updates[-1])
-
-            new_output_layer = self.layers[-1] - output_updates
-            new_layers, new_updates = self._backpropagate(learning_rate,
-                                                          momentum,
-                                                          self.activations[:-1],
-                                                          self.layers,
-                                                          layers_updates[:-1],
-                                                          deltao)
-
-            self.layers = new_layers + [new_output_layer]
-            layers_updates = new_updates + [output_updates]
-            if randomize:
-                # Randomize order of input vector and update target vector correspondingly.
-                np.random.shuffle(node_order)
-                inputs = inputs[node_order, :]
-                targets = targets[node_order, :]
-
-        return error
 
     def _logistic(self, layer_values):
         """
@@ -334,7 +183,7 @@ class MultilayerPerceptron(Learner):
         else:
             return layer_values
 
-    def __recall(self, bias, inputs):
+    def _recall(self, inputs, bias=True):
         """
         Perform a recall on a given set of inputs.
         In other words, run the network to make a prediction or classification.
@@ -342,6 +191,9 @@ class MultilayerPerceptron(Learner):
         Args
           inputs: Input data to the network as a numpy array of arrays, where
                   each inner array is one set of inputs.
+          bias: Indicates whether or not to concatenate a bias node to the
+                inputs array. This is only done when the bias argument is True
+                and the bias attribute is nonzero.
 
         Returns
           A numpy array of arrays representing the network's outputs, where each
@@ -350,7 +202,7 @@ class MultilayerPerceptron(Learner):
         """
 
         # Add the inputs that match the bias node.
-        inputs = self._concat_bias(inputs, bias)
+        inputs = self._concat_bias(inputs, bias and self.bias)
         self.activations = [inputs]
 
         # Compute activations for each network layer.
@@ -386,11 +238,6 @@ class MultilayerPerceptron(Learner):
                 'learner_type not member of LearnerType')
 
         return self.activations[-1]
-
-    def _recall(self, inputs):
-        return self.__recall(self.bias, inputs)
-
-    _recall.__doc__ = __recall.__doc__
 
     def generate_confusion_matrix(self, inputs, targets):
         """
