@@ -45,9 +45,11 @@ from preprocessing import normalize
 
 
 class TestMLP(unittest.TestCase):
+    AND_DATA = np.array([[0, 0, 0], [0, 1, 0], [1, 0, 0], [1, 1, 1]])
+    XOR_DATA = np.array([[0, 0, 0], [0, 1, 1], [1, 0, 1], [1, 1, 0]])
 
     def test_logical_and(self):
-        and_data = np.array([[0, 0, 0], [0, 1, 0], [1, 0, 0], [1, 1, 1]])
+        and_data = self.AND_DATA
         neural_net = mlp.MultilayerPerceptron((2, 2, 1), (False, True))
         neural_net.train(and_data[:, 0:2], and_data[:, 2:], 0.25, 1001)
         confusion_matrix = neural_net.generate_confusion_matrix(
@@ -59,8 +61,17 @@ class TestMLP(unittest.TestCase):
         output = neural_net.recall(and_data[:, 0:2])
         self.assertEqual(output, [False, False, False, True])
 
+    def test_false_bias(self):
+        and_data = self.AND_DATA
+        neural_net = mlp.MultilayerPerceptron((2, 2, 1), (False, True), bias=False)
+        training_inputs = and_data[:, 0:2]
+        training_targets = and_data[:, 2:]
+        neural_net.train_with_early_stopping(training_inputs, training_targets,
+                                             training_inputs, training_targets,
+                                             0.25, 1001)
+
     def test_logical_xor(self):
-        xor_data = np.array([[0, 0, 0], [0, 1, 1], [1, 0, 1], [1, 1, 0]])
+        xor_data = self.XOR_DATA
         neural_net = mlp.MultilayerPerceptron((2, 2, 1), (False, True))
 
         neural_net.train(xor_data[:, 0:2], xor_data[:, 2:], 0.25, 5001)
