@@ -58,7 +58,8 @@ class MultilayerPerceptron(Learner):
       beta: A constant in the logistic activation equation. Defaults to 1.
       learner_type: Activation function to use at the output nodes. Must be
                    a member of LearnerType. Defaults to CLASSIFICATION.
-      bias: Add bias nodes of -1 into the inputs array. Defaults to True.
+      bias: Add bias nodes onto the inputs array. Defaults to -1, but can be any
+            numeric value. A value of 0 will disable the bias node.
       second_hidden_layer_node_count: Number of hidden nodes in the network's
                                       second hidden layer. Any value less than
                                       or equal to 0 will construct a network
@@ -68,7 +69,7 @@ class MultilayerPerceptron(Learner):
     """
 
     def __init__(self, shape, classes=None, beta=1,
-                 learner_type=LearnerType.CLASSIFICATION, bias=True):
+                 learner_type=LearnerType.CLASSIFICATION, bias=-1):
 
         self.beta = beta
         self.learner_type = learner_type
@@ -323,7 +324,7 @@ class MultilayerPerceptron(Learner):
         bias = bias and self.bias
         if bias:
             rows = layer_values.shape[0]
-            return np.concatenate((layer_values, -np.ones((rows, 1))), axis=1)
+            return np.concatenate((layer_values, np.ones((rows, 1)) * bias), axis=1)
 
         else:
             return layer_values
