@@ -82,10 +82,11 @@ class MultilayerPerceptron(Learner):
         self.layers = []
         for layer_index, node_count in enumerate(shape[1:]):
             previous_count = shape[layer_index]
+            adjusted_count = previous_count + 1 if bias else previous_count
             if 0 < layer_index < len(shape) - 2 and bias:
                 node_count += 1
 
-            weights = ((np.random.rand(previous_count + 1, node_count) - 0.5) *
+            weights = ((np.random.rand(adjusted_count, node_count) - 0.5) *
                        2 / np.sqrt(previous_count))
 
             self.layers.append(weights)
@@ -127,8 +128,10 @@ class MultilayerPerceptron(Learner):
 
         """
 
-        valid = np.concatenate(
-            (validation_inputs, -np.ones((np.shape(validation_inputs)[0], 1))), axis=1)
+        valid = validation_inputs
+        if self.bias:
+            valid = np.concatenate((validation_inputs,
+                                    -np.ones((np.shape(valid)[0], 1))), axis=1)
 
         oldest_error = 0
         previous_error = 0
@@ -241,7 +244,8 @@ class MultilayerPerceptron(Learner):
 
         # Add the inputs that match the bias node
         training_dataset_rows = np.shape(inputs)[0]
-        inputs = self._concat_bias(inputs, training_dataset_rows)
+        if self.bias:
+            inputs = self._concat_bias(inputs, training_dataset_rows)
 
         # Compute the initial order of input and target nodes so we can
         # randomize them if we so choose.
@@ -420,8 +424,8 @@ class MultilayerPerceptron(Learner):
         # Read classification data into the confusion matrix.
         for i in range(classifications):
             for j in range(classifications):
-                confusion_matrix[i, j] = np.sum(np.where(outputs == i, 1, 0)
-                                                * np.where(targets == j, 1, 0))
+                confusion_matrix[i, j] = np.sum(np.where(outputs == i, 1, 0) *
+                                                np.where(targets == j, 1, 0))
 
         logger.info("Confusion matrix is:")
         logger.info(str(confusion_matrix))
