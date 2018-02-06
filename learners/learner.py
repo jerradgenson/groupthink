@@ -37,6 +37,8 @@ Dr. Stephen Marsland.
 from enum import Enum
 from abc import ABC, abstractmethod
 
+import numpy as np
+
 
 LearnerType = Enum(
     'LearnerType', 'CLASSIFICATION REGRESSION ONE_OF_N', module=__name__)

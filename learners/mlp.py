@@ -128,7 +128,7 @@ class MultilayerPerceptron(Learner):
 
         """
 
-        valid = self._concat_bias(validation_inputs) if self.bias else validation_inputs
+        valid = self._concat_bias(validation_inputs)
         oldest_error = 0
         previous_error = 0
         current_error = 0
@@ -240,8 +240,7 @@ class MultilayerPerceptron(Learner):
 
         # Add the inputs that match the bias node
         training_dataset_rows = np.shape(inputs)[0]
-        if self.bias:
-            inputs = self._concat_bias(inputs)
+        inputs = self._concat_bias(inputs)
 
         # Compute the initial order of input and target nodes so we can
         # randomize them if we so choose.
@@ -306,20 +305,28 @@ class MultilayerPerceptron(Learner):
 
         return 1.0 / (1.0 + np.exp(-self.beta * layer_values))
 
-    def _concat_bias(self, layer_values):
+    def _concat_bias(self, layer_values, bias=True):
         """
         Concatenate bias node to network layer values.
 
         Args
           layer_values: A numpy array of network layer input or output values.
+          bias: Set to False to override self.bias. When set to True,
+                _concat_bias uses the value of self.bias. Defaults to True.
 
         Returns
-          layer_values with a bias node contatenated onto the end.
+          layer_values with a bias node contatenated onto the end if self.bias
+          is non-zero. Otherwise, simply return layer_values.
 
         """
 
-        rows = layer_values.shape[0]
-        return np.concatenate((layer_values, -np.ones((rows, 1))), axis=1)
+        bias = bias and self.bias
+        if bias:
+            rows = layer_values.shape[0]
+            return np.concatenate((layer_values, -np.ones((rows, 1))), axis=1)
+
+        else:
+            return layer_values
 
     def __recall(self, bias, inputs):
         """
@@ -336,10 +343,8 @@ class MultilayerPerceptron(Learner):
 
         """
 
-        if bias:
-            # Add the inputs that match the bias node.
-            inputs = self._concat_bias(inputs)
-
+        # Add the inputs that match the bias node.
+        inputs = self._concat_bias(inputs, bias)
         self.activations = [inputs]
 
         # Compute activations for each network layer.
@@ -349,7 +354,7 @@ class MultilayerPerceptron(Learner):
                 # Do not apply logistic activation to output layer.
                 layer_activations = self._logistic(layer_activations)
 
-            if layer_index == 0 and self.bias:
+            if layer_index == 0:
                 # Concatendate bias node to first hidden layer.
                 layer_activations = self._concat_bias(layer_activations)
 
