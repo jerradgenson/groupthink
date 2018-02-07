@@ -44,7 +44,7 @@ class ParticleSwarmOptimization(Trainer):
 
     def __init__(self, iterations, population_size, maximum_velocity,
                  learning_factor1=2, learning_factor2=2):
-        
+
         self.population_size = population_size
         self.maximum_velocity = maximum_velocity
         self.learning_factor1 = learning_factor1
@@ -56,8 +56,8 @@ class ParticleSwarmOptimization(Trainer):
         if not hasattr(learner, 'population'):
             # Learner doesn't have a population associated with it yet, so we
             # need to create one.
-            learner.population = self.initialize_population(learner,
-                                                            self.population_size)
+            learner.population = list(self.generate_population(learner,
+                                                               self.population_size))
 
         for iteration in range(self.iterations):
             if iteration > 0:
@@ -70,7 +70,7 @@ class ParticleSwarmOptimization(Trainer):
 
                     else:
                         # Particle doesn't have a velocity, so we generate one.
-                        v = np.zeros(particle.value)
+                        v = np.zeros(*particle.value.shape)
 
                     # Rename variables so they are nicer to read in equation form.
                     c1 = self.learning_factor1
@@ -94,7 +94,8 @@ class ParticleSwarmOptimization(Trainer):
             for particle in learner.population:
                 # Calculate best personal and global fitness for each particle.
                 learner.update(particle.value)
-                particle.fitness = self.calculate_error(learner, inputs, targets)
+                outputs = learner._recall(inputs)
+                particle.fitness = self.calculate_error(outputs, targets)
                 if not hasattr(particle, 'pbest') or particle.fitness < particle.pbest.fitness:
                     # Particle doesn't have a personal best fitness value yet or
                     # its current fitness beats pbest.

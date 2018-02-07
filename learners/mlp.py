@@ -80,20 +80,40 @@ class MultilayerPerceptron(Learner):
         if learner_type not in (LearnerType.CLASSIFICATION, LearnerType.REGRESSION, LearnerType.ONE_OF_N):
             raise InvalidLearnerTypeError('learner_type not member of LearnerType')
 
-        # Initialise network
-        self.layers = []
-        for layer_index, node_count in enumerate(shape[1:]):
-            previous_count = shape[layer_index]
-            adjusted_count = previous_count + 1 if bias else previous_count
-            if 0 < layer_index < len(shape) - 2 and bias:
+        self.layers = self.randomize()
+        return super().__init__(trainer, classes=classes, learner_type=learner_type)
+
+    def randomize(self):
+        """ Generate new network weights using random values. """
+
+        layers = []
+        for layer_index, node_count in enumerate(self.shape[1:]):
+            previous_count = self.shape[layer_index]
+            adjusted_count = previous_count + 1 if self.bias else previous_count
+            if 0 < layer_index < len(self.shape) - 2 and self.bias:
                 node_count += 1
 
             weights = ((np.random.rand(adjusted_count, node_count) - 0.5) *
                        2 / np.sqrt(previous_count))
 
-            self.layers.append(weights)
+            layers.append(weights)
 
-        return super().__init__(trainer, classes=classes, learner_type=learner_type)
+        return layers
+
+    def update(self, new_state):
+        """
+        Replace the network's layer weights with new ones.
+
+        Args
+          new_state: A list of layer weights. Should be the same shape as the
+                     current weights in MultilayerPerceptron.layers.
+
+        Returns
+          None
+
+        """
+
+        self.layers = new_state
 
     def train_with_early_stopping(self, training_inputs, training_targets,
                                   validation_inputs, validation_targets,

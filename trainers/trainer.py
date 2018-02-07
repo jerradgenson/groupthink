@@ -32,6 +32,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
 from abc import ABC, abstractmethod
+from copy import copy
+
+import numpy as np
 
 
 class Trainer(ABC):
@@ -66,6 +69,55 @@ class Trainer(ABC):
         """
 
     def train(self, learner, inputs, targets, *args, **kwargs):
-        return self._train(learner, inputs, targets, *args, **kwargs)
+        self._train(learner, inputs, targets, *args, **kwargs)
+        outputs = learner._recall(inputs)
+        error = self.calculate_error(outputs, targets)
+        return error
 
     train.__doc__ = _train.__doc__
+
+    @staticmethod
+    def calculate_error(outputs, targets):
+        """
+        Calculate the sum-of-squares error given sets of outputs and targets.
+
+        Args
+          outputs: A numpy array of arrays representing a learner's outputs,
+                   where each inner array corresponds to an inner array in the
+                   inputs.
+          targets: A numpy array of arrays representing a learner's targets,
+                   values to compare against the learner's outputs to calculate
+                   the error. targets must be the same shape as outputs.
+
+        Returns
+          A floating-point value indicating the sum-of-squares error.
+
+        """
+
+        return 0.5 * np.sum((outputs - targets) ** 2)
+
+    @staticmethod
+    def generate_population(learner, population_size):
+        """
+        Generate a population of learners from an initial learner. Target Learner
+        must provide a randomize() method to randomize its internal state and an
+        update(new_state) method to update its internal state. The target
+        Learner instance is added to the population, but is not modified.
+
+        Args
+          learner: An instance of learners.learner.Learner.
+          population_size: The size of the population to generate.
+
+        Yields
+          A population of Learners derived from the target learner.
+
+        """
+
+        for index in range(population_size):
+            if index == 0:
+                yield learner
+
+            else:
+                new_learner = copy(learner)
+                new_learner.update(learner.randomize())
+                yield new_learner
